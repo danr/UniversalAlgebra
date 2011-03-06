@@ -31,7 +31,7 @@ module Test₂ where
   ⟦ c , ℓ , suc n ⟧ˡ = c ⊔ ⟦ c , ℓ , n ⟧ˡ
 
   ⟦_,_⟧ : ∀ {c ℓ} {S : Set c} {n} Γ → Law S Γ n → Rel S ℓ → Set ⟦ c , ℓ , n ⟧ˡ
-  ⟦ Γ , Associative   mul am         ⟧ _≈_ = {!lookup mul Γ!} -- ∀ x y z → (x ∙ (y ∙ z)) ≈ ((x ∙ y) ∙ z) 
+  ⟦ Γ , Associative   mul am         ⟧ _≈_ = {!!} -- ∀ x y z → (x ∙ (y ∙ z)) ≈ ((x ∙ y) ∙ z) 
   ⟦ Γ , Commutative   mul am         ⟧ _≈_ = {!!} -- ∀ x y   → (x ∙ y) ≈ (y ∙ x) 
   ⟦ Γ , LeftIdentity  mul am unit au ⟧ _≈_ = {!!} -- ∀ x     → (x ∙ ε) ≈ x
   ⟦ Γ , RightIdentity mul am unit au ⟧ _≈_ = {!!} -- ∀ x     → (ε ∙ x) ≈ x
@@ -43,7 +43,49 @@ module Test₂ where
       ops       : ℕ
       operators : Vec (∃ (λ n → Op n S)) ops
       eqns      : ℕ
-      laws      : Vec (∃ (Law S operators)) eqns     -- these should only be allowed to use those in operators
+      laws      : Vec (∃ (Law S operators)) eqns 
+
+{-
+Monoid : ∀ {c} (X : Set c) → X → Op 2 X → Structure c
+Monoid S = structure S 
+                     2 -- operators
+                     3 -- laws
+                     ( 0 ∷ 2 ∷ [] ) -- one unary and one binary operator
+                                    -- tag these / build expr tree so you cannot use something else?
+                     (λ ε _∙_ →   λ x y z → (x ∙ (y ∙ z)) == ((x ∙ y) ∙ z)   
+                                ∷ λ x     → (x ∙ ε) == x
+                                ∷ λ x     → (ε ∙ x) == x
+                                ∷ [])
+                     )
+-}
+
+module Test₃ where
+
+  module Builder {c} (X : Set c)  -- underlying set
+                 (ops : ℕ)        -- number of operators 
+                 (α : Vec ℕ ops)  -- arities of operators
+                 where
+    
+    data Expr (n : ℕ) : Set where
+      var : (x : Fin n) → Expr n
+      op  : (op : Fin ops) (args : Vec (Expr n) (lookup op α)) → Expr n
+
+    Laws : ℕ → Set
+    Laws zero    = {!!}
+    Laws (suc n) = {!!}
+
+    UnderOps : ∀ {n} → Vec ℕ n → ℕ → Set
+    UnderOps []       laws = Laws laws
+    UnderOps (x ∷ xs) laws = {!!}
+
+--    structure = 
+
+
+{-
+  structure : ∀ {c} (X : Set c) 
+              (ops : ℕ) (eqns : ℕ) (arities : Vec ℕ ops) → 
+  structure = Rest X ops eqns arities
+  -}
      
 {-
   Monoid : ∀ {c} (X : Set c) → X → Op 2 X → Structure c
