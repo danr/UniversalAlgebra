@@ -47,9 +47,9 @@ module Test₃ where
         _==_ : (lhs rhs : Expr args) → Equality
 
       Env : ℕ → Set
-      Env = Vec (Fin args)
+      Env = Vec (Expr args)
 
-      builder-type : (n : ℕ) → N-ary n (Fin args) Set
+      builder-type : (n : ℕ) → N-ary n (Expr args) Set
       builder-type zero    = Equality
       builder-type (suc n) = λ i → builder-type n
 
@@ -57,13 +57,13 @@ module Test₃ where
       builder zero    []       = λ xs → xs
       builder (suc n) (x ∷ xs) = λ f → builder n xs (f x)
 
-      build-type : N-ary args (Fin args) Set
+      build-type : N-ary args (Expr args) Set
       build-type = builder-type args
 
       build : ∀ⁿ args build-type → Equality
-      build = builder args (allFin args)
+      build = builder args (map var (allFin args))
 
-    open Law public using (Equality ; _==_ ; build ; builder-type)
+    open Law public using (Equality ; build ; _==_) 
 
     Env : ℕ → Set
     Env = Vec (Fin ops)
@@ -74,18 +74,27 @@ module Test₃ where
 
     enter : (n : ℕ) → Env n → ∀ⁿ n (enter-type n) → Vec (∃ Equality) laws
     enter zero    []       = λ xs → xs
-    enter (suc n) (x ∷ xs) = λ f → enter n xs (f {!op x!})
+    enter (suc n) (x ∷ xs) = λ f → enter n xs (f x)
 
     structure : ∀ⁿ ops (enter-type ops) → Vec (∃ Equality) laws
-    structure = enter ops (allFin ops) 
+    structure = enter ops (allFin ops) -- (map op (allFin ops)) 
+
 
   open Builder public 
-  
-  Monoid : ∀ {c} (X : Set c) → {!!} {- → X → Op 2 X → Vec {!!} 3 -}
+
+  test : ∀ {i} (X : Set i) → {!!}
+  test {i} X = build X 2 1 (0 ∷ 2 ∷ []) 2 (λ x y → x == y)
+ 
+{-
+ 
+  Monoid : ∀ {c} (X : Set c) → Vec
+                                 (Σ ℕ
+                                  (Equality X 2 3 (0 ∷ 2 ∷ []))) 3
   Monoid S = structure S 2 3 ( 0 ∷ 2 ∷ [] ) 
-                         (λ ε _∙_ → (3 , build S 2 3 (0 ∷ 2 ∷ []) 3 (λ x y z → {!(x ∙ (y ∙ z)) == ((x ∙ y) ∙ z)!})) 
+                         (λ ε _∙_ → (3 , build S 2 3 (0 ∷ 2 ∷ []) 3 (λ x y z → {!!} == {!!})) 
                                   ∷ {!!}) 
 
+-}
 
 {-structure S 
                        2 -- operators
