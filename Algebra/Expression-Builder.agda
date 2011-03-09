@@ -3,6 +3,12 @@
 -- Making expressions
 --
 
+-- Todo: remove <, ≤ and use Fins and
+-- inject₁ : {m' : ℕ} → Fin m' → Fin (suc m')
+-- instead.
+--
+-- Todo: make the operators appear in right order
+
 {-# OPTIONS --universe-polymorphism #-}
 module Expression-Builder where
 
@@ -69,8 +75,24 @@ module Builder (ops : ℕ)         -- operators
   
 module Example where
 
-  open Builder 3 (1 ∷ 2 ∷ 0 ∷ []) public  -- 3 operators, arities are 0, 2 and 1
+  open Builder 3 (1 ∷ 2 ∷ 0 ∷ []) public  
+  -- 3 operators, arities are 0, 2 and 1
 
   -- An expression!
   e : Expr     
-  e = build (λ ε _∙_ _⁻¹ → ε ∙ ε ⁻¹) 
+  e = op zero ((op (suc zero) 
+                   ((op (suc (suc zero)) []) ∷ ((op (suc (suc zero)) []) ∷ []))) ∷ [])
+  
+  e₂ : Expr
+  e₂ = build (λ #0 _+_ -_ → - (#0 + #0))
+
+module Example₂ where
+  
+  open Builder 5 (3 ∷ 0 ∷ 0 ∷ 2 ∷ 2 ∷ []) public
+  
+  e : Expr
+  e = build (λ _∨_ _∧_ true false if_then_else_ → 
+            if true ∧ false then true ∨ true else false)
+
+
+
