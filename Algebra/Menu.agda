@@ -16,6 +16,7 @@ open import Data.Vec
 open import Data.Product renaming (map to _⋆_)
 open import Data.Vec.N-ary
 open import Function
+open import Algebra.Parallell-Vector
 
 Op : ∀ {i} → ℕ → Set i → Set i
 Op zero    A = A
@@ -34,7 +35,7 @@ Monoid = structure
                      (λ ε _∙_ →   (3 , λ x y z → (x ∙ (y ∙ z)) == ((x ∙ y) ∙ z)  ) 
                                 ∷ (1 , λ x     → (x ∙ ε) == x                    )
                                 ∷ (1 , λ x     → (ε ∙ x) == x                    )
-                                ∷ [])
+                                - [])
                      )
 -}
 
@@ -124,8 +125,8 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
 -- Want: a datatype with exactly (n : ℕ) elements of type (Fin (suc n) → Set)
 -- Actually quite tricky to define... I doubt this is a good version
 data UVec {i} (m : ℕ) (A : Fin (suc m) → Set i) : Fin (suc m) → Set i where
-  []  : UVec m A zero
-  _∷_ : ∀ {n : Fin m} → (x : A (suc n)) (xs : UVec m A (inject₁ n)) → UVec m A (suc n)
+  [_]′ : (x : A zero) → UVec m A zero
+  _∷_  : ∀ {n : Fin m} → (x : A (suc n)) (xs : UVec m A (suc n)) → UVec m A (inject₁ n)
 
 max : ∀ n → Fin (suc n)
 max zero = zero
@@ -134,8 +135,12 @@ max (suc n) = inject₁ (max n)
 -- This conversion is a mess (and you also have to instantiate it with max)
 -- Would be nice if you could convert them into Vec and back? but how would that actually work ^^
 toUVec : ∀ {i} n {A : Fin (suc n) → Set i} → ((x : Fin (suc n)) → A x) → UVec n A (max n)
-toUVec zero    f = []
-toUVec (suc n) f = {!!}
+toUVec zero    f = [ f zero ]′ -- []
+toUVec (suc n) f = {!_∷_!}
+
+fromUVec : ∀ {i} n {A : Fin (suc n) → Set i} → UVec n A (max n) → (x : Fin (suc n)) → A x
+fromUVec n v zero     = {!!}
+fromUVec n v (suc i') = {!!}
 
 -- A Lava is a Magma that is commutative
 -- PS. I made this up
@@ -157,6 +162,10 @@ _+′_ : ℤ₂ → ℤ₂ → ℤ₂
 #0 +′ #1 = #1
 #1 +′ #1 = #0
 
++-comm : ∀ x y → x +′ y ≡ y +′ x
++-comm x y = {!!}
+
+
 -- Want to instantiating in a more convenient way.
 -- Maybe have a hidden instantiating record, and an open one that you sort
 -- of run a function to to convert it
@@ -165,14 +174,9 @@ _+′_ : ℤ₂ → ℤ₂ → ℤ₂
 ℤ₂-Lava : Instance zero zero Lava
 ℤ₂-Lava = record 
   { setoid = Set→Setoid ℤ₂
-  ; ⟦op⟧    = ⟦op⟧
-  ; ⟦law⟧   = {!!} 
+  ; ⟦op⟧    = unpar (_+′_ ∷ [])
+  ; ⟦law⟧   = unpar ({!!} ∷ []) 
   }
-  
-  where
-    ⟦op⟧ : (x : Fin 1) → Op (lookup x (2 ∷ [])) ℤ₂
-    ⟦op⟧ zero    = _+′_
-    ⟦op⟧ (suc ())
 
 -- Cannot do uncurry on this one (loses dependency information somehow)
 -- Uncurry this in the interpretation instead (trickier, but doable)

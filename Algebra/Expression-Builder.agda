@@ -2,10 +2,6 @@
 --
 -- Making expressions
 --
-
--- Todo: remove <, ≤ and use Fins and
--- inject₁ : {m' : ℕ} → Fin m' → Fin (suc m')
--- instead.
 --
 -- Todo: make the operators appear in right order
 
@@ -38,6 +34,14 @@ module Builder (ops : ℕ)         -- operators
   -- Decreasing the left hand side of ≤
   ↓_ : ∀ {m n} → suc m ≤ n → m ≤ n
   ↓_ (s≤s m≤n) = m≤n ++
+
+  data Vector {i} (n : ℕ) (A : Fin n → Set i) : Set i where
+
+
+
+
+
+
 
   -- Reflexivity of ≤
   m≤m : ∀ {m} → m ≤ m
