@@ -34,9 +34,9 @@ m≤m : ∀ {m} → m ≤ m
 m≤m {zero} = z≤n
 m≤m {suc n} = s≤s m≤m
 
-Op : ∀ {i} → ℕ → Set i → Set i
+Op : ∀ {i} → ℕ → Set i → Set i 
 Op zero    A = A
-Op (suc n) A = A → Op n A
+Op (suc n) A = A → Op n A 
 
 apply : ∀ {i} {X : Set i} (n : ℕ) → Op n X → Vec X n → X
 apply zero    f []       = f
@@ -46,65 +46,70 @@ makeOp : ∀ {i} {X : Set i} (n : ℕ) → (Vec X n → X) → Op n X
 makeOp zero    f = f []
 makeOp (suc n) f = λ x → makeOp n (λ xs → f (x ∷ xs))
 
-module Builder (ops : ℕ)        -- number of operators 
-               (α : Vec ℕ ops)  -- arities of operators
-               (laws : ℕ)       -- number of laws
-               where
+module Builder (arities : List ℕ) where
+
+  ops : ℕ
+  ops = length arities
+  
+  α : Vec ℕ ops
+  α = fromList arities
   
   data Expr (v : ℕ) : Set where
     var : (x : Fin v) → Expr v
     op  : (x : Fin ops) (args : Vec (Expr v) (lookup x α)) → Expr v
 
-  module GetOps (v : ℕ) where
+  data Equality (v : ℕ) : Set where
+    _==_ : (lhs rhs : Expr v) → Equality v
 
-    -- Arity of an operator, indexed by a comparison
-    arity : ∀ {n} → n < ops → ℕ
-    arity p = lookup (fromℕ≤ p) α
+  Env : (v n : ℕ) → Set
+  Env v n = Vec (Expr v) n
 
-    -- The underlying type
-    type : (n : ℕ) (p : n ≤ ops) → Set₁ 
-    type zero    p = Set
-    type (suc n) p = Op (arity p) (Expr v) → (type n (↓ p)) 
-     
-    -- Quantification over the type
-    ∀′ : (n : ℕ) (p : n ≤ ops) → type n p → Set
-    ∀′ zero    p P = P
-    ∀′ (suc n) p P = (xs : Op (arity p) (Expr v)) → ∀′ n (↓ p) (P xs)
+  law-type : (v n : ℕ) → Set₁
+  law-type v zero    = Set
+  law-type v (suc n) = Expr v → law-type v n
 
-    -- The runner type
-    run-type : (n : ℕ) (p : n ≤ ops) → type n p
-    run-type zero    p = Expr v
-    run-type (suc n) p = λ f → run-type n (↓ p) 
+  law-run′ : (v n : ℕ) → law-type v n
+  law-run′ v zero    = Equality v
+  law-run′ v (suc n) = λ i → law-run′ v n
 
-    -- Runner
-    run : (n : ℕ) (p : n ≤ ops) → ∀′ n p (run-type n p) → Expr v
-    run zero    p = λ xs → xs
-    run (suc n) p = λ f → run n (↓ p) (f (makeOp (arity p) (op (fromℕ≤ p))))
+  law-∀ : (v n : ℕ) → law-type v n → Set
+  law-∀ v zero    P = P
+  law-∀ v (suc n) P = (x : Expr v) → law-∀ v n (P x)
 
-    -- To build, start from the beginning
-    build : ∀′ ops m≤m (run-type ops m≤m) → Expr v 
-    build = run ops m≤m
+  law-run″ : (v n : ℕ) → Env v n → law-∀ v n (law-run′ v n) → Equality v
+  law-run″ v zero    Γ        = λ xs → xs
+  law-run″ v (suc n) (x ∷ xs) = λ f → law-run″ v n xs (f x)
 
-  module Law (args : ℕ) where
+  law-run : (v : ℕ) → law-∀ v v (law-run′ v v) → Equality v
+  law-run v = law-run″ v v (Data.Vec.map var (allFin v))
 
-    data Equality : Set where
-      _==_ : (lhs rhs : Expr args) → Equality
+  -- Arity of an operator, indexed by a comparison
+  arity : ∀ {n} → n < ops → ℕ
+  arity p = lookup (fromℕ≤ p) α
 
-  open Law public using (Equality ; _==_) 
+  -- The underlying type
+  type : (n : ℕ) (p : n ≤ ops) → Set₁
+  type zero    p = Set 
+  type (suc n) p = (∀ {v} → Op (arity p) (Expr v)) → (type n (↓ p)) 
+   
+  -- Quantification over the type
+  ∀′ : (n : ℕ) (p : n ≤ ops) → type n p → Set
+  ∀′ zero    p P = P
+  ∀′ (suc n) p P = (op : ({v : ℕ} → Op (arity p) (Expr v))) → ∀′ n (↓ p) (P op)
 
-  Env : ℕ → Set
-  Env = Vec (Fin ops)
+  -- The runner type
+  run-type : (n : ℕ) (p : n ≤ ops) → type n p
+  run-type zero    p = List (∃ λ v → (law-∀ v v (law-run′ v v)))
+  run-type (suc n) p = λ f → run-type n (↓ p) 
 
-  enter-type : (n : ℕ) → N-ary n (Fin ops) Set
-  enter-type zero    = Vec (∃ Equality) laws
-  enter-type (suc n) = λ i → enter-type n
+  -- Runner
+  run : (n : ℕ) (p : n ≤ ops) → ∀′ n p (run-type n p) → List (∃ Equality) 
+  run zero    p = λ xs → Data.List.map (λ x → proj₁ x , law-run (proj₁ x) (proj₂ x) ) xs
+  run (suc n) p = λ f → run n (↓ p) (f (λ {v} → makeOp (arity p) (op {v} (fromℕ≤ p))))
 
-  enter : (n : ℕ) → Env n → ∀ⁿ n (enter-type n) → Vec (∃ Equality) laws
-  enter zero    []       = λ xs → {!xs!}
-  enter (suc n) (x ∷ xs) = λ f → enter n xs (f x)
-
-  structure : ∀ⁿ ops (enter-type ops) → Vec (∃ Equality) laws
-  structure = enter ops (allFin ops)
+  -- To build, start from the beginning
+  build : ∀′ ops m≤m (run-type ops m≤m) → List (∃ Equality)
+  build = run ops m≤m
 
   module Interpret c ℓ (setoid : Setoid c ℓ) 
                        (⟦op_⟧ : (x : Fin ops) → Op (lookup x α) (Setoid.Carrier setoid)) where
@@ -124,23 +129,30 @@ module Builder (ops : ℕ)        -- number of operators
     ⟦ lhs == rhs ⟧′ Γ = ⟦ lhs ⟧ Γ ≈ ⟦ rhs ⟧ Γ
 
 
+module Test where
+  
+  open Builder (1 ∷ 2 ∷ [])
+ 
+  laws : List (∃ Equality)
+  laws = build (λ _+_ -_ → (3 , λ x y z → (x + y) == - z)
+                         ∷ (4 , λ x y z w → ((x + y) + (z + w)) == ((- (z + x)) + - w) ) 
+                         ∷ (3 , λ x y z → (x + y) == - (y + z))
+                         ∷ [])
+
+
 record Structure : Set where
-  field  
+  field 
     arities   : List ℕ 
-    arguments : List ℕ -- minus one
 
-  #ops  = length arities 
-  #laws = length arguments
+  open Builder arities
 
-  open Builder #ops (fromList arities) #laws
+  field 
+    laws      : List (∃ Equality) 
 
-  field
-    laws      : ParList Equality arguments
-
-  open Builder #ops (fromList arities) #laws public
+  open Builder arities public
 
 record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
-  open Structure S
+  open Structure S 
 
   field
     setoid : Setoid c ℓ
@@ -155,9 +167,14 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
 
   -- easy to define, hard to instantiate
   field
-    ⟦law⟧ : ParVec (λ x → (xs : Vec X (proj₁ x)) → ⟦ proj₂ x ⟧′ xs) (toFlatVec laws)
+    ⟦law⟧ : ParList (λ x → (xs : Vec X (proj₁ x)) → ⟦ proj₂ x ⟧′ xs) laws
 
+-- This friendly little function does not work too well :(
 
+module ImplicitBuilder {arities : List ℕ} where
+  open Builder arities public using (build ; Expr ; Equality ; _==_)
+
+open ImplicitBuilder public
 
 -- Sketch of projection formulas
 {-

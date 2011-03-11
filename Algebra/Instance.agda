@@ -9,21 +9,70 @@ open import Data.Fin
 open import Data.Vec
 open import Data.ParallelVector
 open import Data.ParallelList
+open import Data.Product
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 
 open import Level
 
+Group : Structure
+Group = record 
+  { arities = 2 ∷ 1 ∷ 0 ∷ []
+  ; laws = build 
+         (λ ε _⁻¹ _∙_ → (3 , λ x y z → ((x ∙ y) ∙ z) == (x ∙ (y ∙ z))) 
+                      ∷ {!!}
+                      ∷ {!!}
+                      ∷ {!!}
+                      ∷ {!!}
+                      ∷ []) 
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- A Lava is a Magma that is commutative
 -- PS. I made this up
 Lava : Structure
 Lava = record 
-  { arities   = 2 ∷ []
-  ; arguments = 2 ∷ []
-  ; laws      = Builder._==_ (Builder.op zero (Builder.var zero       ∷ Builder.var (suc zero) ∷ []))
-                             (Builder.op zero (Builder.var (suc zero) ∷ Builder.var zero       ∷ [])) 
-              ∷ [] 
+  { arities = 2 ∷ []
+  ; laws    = build (λ _∙_ → (2 , λ x y → (x ∙ y) == (y ∙ x)) ∷ [])
   }
 
 data ℤ₂ : Set where
@@ -41,6 +90,7 @@ _+′_ : ℤ₂ → ℤ₂ → ℤ₂
 +-comm #1 #0 = refl
 +-comm #1 #1 = refl
 
+
 -- Want to instantiating in a more convenient way.
 -- Maybe have a hidden instantiating record, and an open one that you sort
 -- of run a function to to convert it
@@ -53,9 +103,12 @@ _+′_ : ℤ₂ → ℤ₂ → ℤ₂
   ; ⟦law⟧  = (λ xs → +-comm (lookup zero xs) (lookup (suc zero) xs)) ∷ []
   }
 
+
+
 -- Cannot do uncurry on this one (loses dependency information somehow)
 -- Uncurry this in the interpretation instead (trickier, but doable)
-Commutativity : ∀ x y → x +′ y ≡ y +′ x
-Commutativity x y = par-lookup (Instance.⟦law⟧ ℤ₂-Lava) zero (x ∷ y ∷ []) 
+
+-- Commutativity : ∀ x y → x +′ y ≡ y +′ x
+-- Commutativity x y = par-lookup (Instance.⟦law⟧ ℤ₂-Lava) zero (x ∷ y ∷ []) 
 
 
