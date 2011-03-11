@@ -50,13 +50,13 @@ count-lookup (suc n) (suc i) = trans (suc-lookup n i (count n))
                                      (cong suc (count-lookup n i))
 
 par-lookup : ∀ {n : ℕ} {i} {j} {A : Set i} {B : A → Set j} 
-            → (xs : Vec A n) → ParVec B xs → (x : Fin n) → B (lookup x xs)
-par-lookup []       []       ()
-par-lookup (x ∷ xs) (p ∷ ps) zero    = p
-par-lookup (x ∷ xs) (p ∷ ps) (suc i) = par-lookup xs ps i 
+            → {xs : Vec A n} → ParVec B xs → (x : Fin n) → B (lookup x xs)
+par-lookup []       ()
+par-lookup (p ∷ ps) zero    = p
+par-lookup (p ∷ ps) (suc i) = par-lookup ps i 
 
 uncount : ∀ {n : ℕ} {i} {B : Fin n → Set i} → ParVec B (count n) → (x : Fin n) → B x
-uncount {n} {i} {B} xs x = subst B (count-lookup n x) (par-lookup (count n) xs x) 
+uncount {n} {i} {B} xs x = subst B (count-lookup n x) (par-lookup xs x) 
 
 -- Some silly examples
 module Example where

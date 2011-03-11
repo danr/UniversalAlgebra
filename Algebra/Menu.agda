@@ -10,13 +10,15 @@ module Algebra.Menu where
 open import Level
 open import Relation.Binary 
 open import Relation.Binary.PropositionalEquality renaming (setoid to Set→Setoid)
+open import Data.List
 open import Data.Nat hiding (_⊔_)
 open import Data.Fin
 open import Data.Vec
 open import Data.Product renaming (map to _⋆_)
 open import Data.Vec.N-ary
 open import Function
-open import Algebra.Parallell-Vector
+open import Data.ParallelVector
+open import Data.ParallelList
 
 Op : ∀ {i} → ℕ → Set i → Set i
 Op zero    A = A
@@ -87,19 +89,19 @@ module Builder (ops : ℕ)        -- number of operators
     ⟦ lhs == rhs ⟧′ Γ = ⟦ lhs ⟧ Γ ≈ ⟦ rhs ⟧ Γ
 
 record Structure : Set where
+  field  
+    arities   : List ℕ
+    arguments : List ℕ 
+
+  #ops  = length arities 
+  #laws = length arguments
+
+  open Builder #ops (fromList arities) #laws
+
   field
-    -- restrict ops to only be positive?
-    #ops    : ℕ                -- this one can probably be hidden sometime...
-    arities : Vec ℕ #ops
-    #laws   : ℕ                -- and this too
+    laws      : ParList Equality arguments
 
-  open Builder #ops arities #laws
-
-  field
-    laws    : Vec (∃ Equality) #laws
-
-  open Builder #ops arities #laws public
-
+  open Builder #ops (fromList arities) #laws public
 
 record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
   open Structure S
@@ -111,77 +113,13 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
   
   -- easy to work with (in the interpreter), hard to instantiate
   field
-    ⟦op⟧ : (x : Fin #ops) → Op (lookup x arities) X    -- Messy to use N-ary here
+    ⟦op⟧ : ParVec (λ n → Op n X) (fromList arities)
 
-  open Interpret c ℓ setoid ⟦op⟧
+  open Interpret c ℓ setoid (par-lookup ⟦op⟧)
 
   -- easy to define, hard to instantiate
   field
-    ⟦law⟧ : (x : Fin #laws) 
-            (xs : Vec X (proj₁ (lookup x laws))) 
-          → ⟦ proj₂ (lookup x laws) ⟧′ xs            -- Uncurry this beast
-
--- Need some way to instantiate these...
--- Want: a datatype with exactly (n : ℕ) elements of type (Fin (suc n) → Set)
--- Actually quite tricky to define... I doubt this is a good version
-data UVec {i} (m : ℕ) (A : Fin (suc m) → Set i) : Fin (suc m) → Set i where
-  [_]′ : (x : A zero) → UVec m A zero
-  _∷_  : ∀ {n : Fin m} → (x : A (suc n)) (xs : UVec m A (suc n)) → UVec m A (inject₁ n)
-
-max : ∀ n → Fin (suc n)
-max zero = zero
-max (suc n) = inject₁ (max n)
-
--- This conversion is a mess (and you also have to instantiate it with max)
--- Would be nice if you could convert them into Vec and back? but how would that actually work ^^
-toUVec : ∀ {i} n {A : Fin (suc n) → Set i} → ((x : Fin (suc n)) → A x) → UVec n A (max n)
-toUVec zero    f = [ f zero ]′ -- []
-toUVec (suc n) f = {!_∷_!}
-
-fromUVec : ∀ {i} n {A : Fin (suc n) → Set i} → UVec n A (max n) → (x : Fin (suc n)) → A x
-fromUVec n v zero     = {!!}
-fromUVec n v (suc i') = {!!}
-
--- A Lava is a Magma that is commutative
--- PS. I made this up
-Lava : Structure
-Lava = record 
-  { #ops    = 1
-  ; arities = 2 ∷ []
-  ; #laws   = 1            -- Here the expression dsl will come handy
-  ; laws    = (2 , Builder._==_ (Builder.op zero ((Builder.var zero) ∷ ((Builder.var (suc zero)) ∷ []))) 
-                                (Builder.op zero ((Builder.var (suc zero)) ∷ ((Builder.var zero) ∷ [])))) ∷ [] 
-  }
-
-data ℤ₂ : Set where
-  #0 #1 : ℤ₂
-
-_+′_ : ℤ₂ → ℤ₂ → ℤ₂
-#0 +′ #0 = #0
-#1 +′ #0 = #1
-#0 +′ #1 = #1
-#1 +′ #1 = #0
-
-+-comm : ∀ x y → x +′ y ≡ y +′ x
-+-comm x y = {!!}
-
-
--- Want to instantiating in a more convenient way.
--- Maybe have a hidden instantiating record, and an open one that you sort
--- of run a function to to convert it
--- I think it might be a good idea to have the datatype abstract,
--- then I can for instance sort the operators/laws how I wish
-ℤ₂-Lava : Instance zero zero Lava
-ℤ₂-Lava = record 
-  { setoid = Set→Setoid ℤ₂
-  ; ⟦op⟧    = unpar (_+′_ ∷ [])
-  ; ⟦law⟧   = unpar ({!!} ∷ []) 
-  }
-
--- Cannot do uncurry on this one (loses dependency information somehow)
--- Uncurry this in the interpretation instead (trickier, but doable)
-Commutativity : ∀ x y → x +′ y ≡ y +′ x
-Commutativity x y = (Instance.⟦law⟧ ℤ₂-Lava zero) (x ∷ (y ∷ []))
+    ⟦law⟧ : ParVec (λ x → (xs : Vec X (proj₁ x)) → ⟦ proj₂ x ⟧′ xs) (toFlatVec laws)
 
 -- Sketch of projection formulas
 {-
@@ -213,3 +151,4 @@ module Projection {c ℓ} {S : Structure} (I : Instance c ℓ S) where
   -- but I guess if you write a decision procedure! and pattern matches
   -- on that it returns yes instead. hmm. that's probably it.
 -}
+

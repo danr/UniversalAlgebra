@@ -14,8 +14,8 @@ open import Data.Vec
 open import Data.Vec.N-ary
 open import Level
 
-module Builder (ops : ℕ)         -- operators 
-               (as  : Vec ℕ ops) -- arities of operators
+module Builder (ops  : ℕ)         -- operators 
+               (as   : Vec ℕ ops) -- arities of operators
                where
 
   -- Expression datatype
@@ -34,14 +34,6 @@ module Builder (ops : ℕ)         -- operators
   -- Decreasing the left hand side of ≤
   ↓_ : ∀ {m n} → suc m ≤ n → m ≤ n
   ↓_ (s≤s m≤n) = m≤n ++
-
-  data Vector {i} (n : ℕ) (A : Fin n → Set i) : Set i where
-
-
-
-
-
-
 
   -- Reflexivity of ≤
   m≤m : ∀ {m} → m ≤ m
