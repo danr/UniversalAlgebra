@@ -12,7 +12,7 @@ open import Relation.Binary
 open import Relation.Binary.PropositionalEquality renaming (setoid to Set→Setoid)
 open import Data.List
 open import Data.Nat hiding (_⊔_)
-open import Data.Fin
+open import Data.Fin renaming (_<_ to _<Fin_ ; _≤_ to _≤Fin_)
 open import Data.Vec
 open import Data.Product renaming (map to _⋆_)
 open import Data.Vec.N-ary
@@ -20,35 +20,70 @@ open import Function
 open import Data.ParallelVector
 open import Data.ParallelList
 
+-- Increasing the right side of ≤
+_++ : ∀ {m n} → m ≤ n → m ≤ suc n
+_++ z≤n = z≤n
+_++ (s≤s m≤n) = s≤s (m≤n ++)
+
+-- Decreasing the left hand side of ≤
+↓_ : ∀ {m n} → suc m ≤ n → m ≤ n
+↓_ (s≤s m≤n) = m≤n ++
+
+-- Reflexivity of ≤
+m≤m : ∀ {m} → m ≤ m
+m≤m {zero} = z≤n
+m≤m {suc n} = s≤s m≤m
+
 Op : ∀ {i} → ℕ → Set i → Set i
 Op zero    A = A
 Op (suc n) A = A → Op n A
 
-apply : ∀ {i} {X : Set i} n → Op n X → Vec X n → X
+apply : ∀ {i} {X : Set i} (n : ℕ) → Op n X → Vec X n → X
 apply zero    f []       = f
 apply (suc n) f (x ∷ xs) = apply n (f x) xs
 
-{-
-Monoid : Structure
-Monoid = structure 
-                     2 -- operators
-                     3 -- laws
-                     ( 0 ∷ 2 ∷ [] ) -- one constant and one binary operator
-                     (λ ε _∙_ →   (3 , λ x y z → (x ∙ (y ∙ z)) == ((x ∙ y) ∙ z)  ) 
-                                ∷ (1 , λ x     → (x ∙ ε) == x                    )
-                                ∷ (1 , λ x     → (ε ∙ x) == x                    )
-                                - [])
-                     )
--}
+makeOp : ∀ {i} {X : Set i} (n : ℕ) → (Vec X n → X) → Op n X
+makeOp zero    f = f []
+makeOp (suc n) f = λ x → makeOp n (λ xs → f (x ∷ xs))
 
 module Builder (ops : ℕ)        -- number of operators 
                (α : Vec ℕ ops)  -- arities of operators
                (laws : ℕ)       -- number of laws
                where
   
-  data Expr (n : ℕ) : Set where
-    var : (x : Fin n) → Expr n
-    op  : (x : Fin ops) (args : Vec (Expr n) (lookup x α)) → Expr n
+  data Expr (v : ℕ) : Set where
+    var : (x : Fin v) → Expr v
+    op  : (x : Fin ops) (args : Vec (Expr v) (lookup x α)) → Expr v
+
+  module GetOps (v : ℕ) where
+
+    -- Arity of an operator, indexed by a comparison
+    arity : ∀ {n} → n < ops → ℕ
+    arity p = lookup (fromℕ≤ p) α
+
+    -- The underlying type
+    type : (n : ℕ) (p : n ≤ ops) → Set₁ 
+    type zero    p = Set
+    type (suc n) p = Op (arity p) (Expr v) → (type n (↓ p)) 
+     
+    -- Quantification over the type
+    ∀′ : (n : ℕ) (p : n ≤ ops) → type n p → Set
+    ∀′ zero    p P = P
+    ∀′ (suc n) p P = (xs : Op (arity p) (Expr v)) → ∀′ n (↓ p) (P xs)
+
+    -- The runner type
+    run-type : (n : ℕ) (p : n ≤ ops) → type n p
+    run-type zero    p = Expr v
+    run-type (suc n) p = λ f → run-type n (↓ p) 
+
+    -- Runner
+    run : (n : ℕ) (p : n ≤ ops) → ∀′ n p (run-type n p) → Expr v
+    run zero    p = λ xs → xs
+    run (suc n) p = λ f → run n (↓ p) (f (makeOp (arity p) (op (fromℕ≤ p))))
+
+    -- To build, start from the beginning
+    build : ∀′ ops m≤m (run-type ops m≤m) → Expr v 
+    build = run ops m≤m
 
   module Law (args : ℕ) where
 
@@ -65,7 +100,7 @@ module Builder (ops : ℕ)        -- number of operators
   enter-type (suc n) = λ i → enter-type n
 
   enter : (n : ℕ) → Env n → ∀ⁿ n (enter-type n) → Vec (∃ Equality) laws
-  enter zero    []       = λ xs → xs
+  enter zero    []       = λ xs → {!xs!}
   enter (suc n) (x ∷ xs) = λ f → enter n xs (f x)
 
   structure : ∀ⁿ ops (enter-type ops) → Vec (∃ Equality) laws
@@ -88,10 +123,11 @@ module Builder (ops : ℕ)        -- number of operators
     ⟦_⟧′ : ∀ {n} → Equality n → Vec X n → Set ℓ
     ⟦ lhs == rhs ⟧′ Γ = ⟦ lhs ⟧ Γ ≈ ⟦ rhs ⟧ Γ
 
+
 record Structure : Set where
   field  
-    arities   : List ℕ
-    arguments : List ℕ 
+    arities   : List ℕ 
+    arguments : List ℕ -- minus one
 
   #ops  = length arities 
   #laws = length arguments
@@ -120,6 +156,8 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
   -- easy to define, hard to instantiate
   field
     ⟦law⟧ : ParVec (λ x → (xs : Vec X (proj₁ x)) → ⟦ proj₂ x ⟧′ xs) (toFlatVec laws)
+
+
 
 -- Sketch of projection formulas
 {-
