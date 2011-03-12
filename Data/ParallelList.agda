@@ -22,3 +22,6 @@ toFlatList (p ∷ ps) = (, p) ∷ (toFlatList ps)
 toFlatVec : ∀ {i} {j} {A : Set i} {B : A → Set j} {xs : List A} → ParList B xs → Vec (∃ B) (length xs)
 toFlatVec []       = []
 toFlatVec (p ∷ ps) = (, p) ∷ (toFlatVec ps)
+
+
+
