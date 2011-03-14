@@ -22,6 +22,7 @@ open import Function
 open import Data.ParallelVector
 open import Data.ParallelList
 open import Data.SimpleN-ary
+open import Data.Sum
 
 import Data.Vec.Pi-ary as Pi
 import Algebra.Interpret as Interpret
@@ -37,7 +38,7 @@ record Structure : Set where
 
   open Builder arities public
 
-record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
+record Instance c ℓ (S : Structure) : Set (suc (ℓ ⊔ c)) where
   open Structure S 
 
   field
@@ -45,18 +46,18 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
 
   open Setoid setoid renaming (Carrier to X)
   
-  -- easy to work with (in the interpreter), hard to instantiate
   field
     ⟦op⟧ : ParList (λ n → Op n X) arities
 
   open Interpret arities c ℓ setoid ⟦op⟧
 
-  -- easy to define, hard to instantiate
   field
-    ⟦law⟧ : ParList (λ x → {!⟦ proj₂ x ⟧!}) laws 
+    ⟦law⟧ : ParList (λ x → ⟦ proj₂ x ⟧‴) laws
 
--- This friendly little function does not work too well :(
-  
+    -- use filter to filter out those with arities ≢ 0
+
+    ⟦cong⟧ : ParList (λ x → proj₁ x ≡ 0 ⊎ ({ne : proj₁ x ≢ 0} → congr≢ (proj₁ x) ne (proj₂ x) )) (toFlatList ⟦op⟧)
+
 
 module ImplicitBuilder {arities : List ℕ} where
   open Builder arities public using (build ; Expr ; Equality ; _==_)

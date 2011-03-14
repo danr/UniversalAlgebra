@@ -16,11 +16,13 @@ open import Relation.Binary.PropositionalEquality
 
 open import Level
 
+import Algebra.FunctionProperties as FP
+
 Group : Structure
 Group = record 
   { arities = 2 ∷ 1 ∷ 0 ∷ []
   ; laws = build 
-         (λ ε _⁻¹ _∙_ → (3 , λ x y z → ((x ∙ y) ∙ z) == (x ∙ (y ∙ z))) 
+         (λ ε _⁻¹ _∙_ → (2 , λ x y z → ((x ∙ y) ∙ z) == (x ∙ (y ∙ z))) 
                       ∷ {!!}
                       ∷ {!!}
                       ∷ {!!}
@@ -28,51 +30,12 @@ Group = record
                       ∷ []) 
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- A Lava is a Magma that is commutative
 -- PS. I made this up
 Lava : Structure
 Lava = record 
   { arities = 2 ∷ []
-  ; laws    = build (λ _∙_ → (2 , λ x y → (x ∙ y) == (y ∙ x)) ∷ [])
+  ; laws    = build (λ _∙_ → (1 , λ x y → (x ∙ y) == (y ∙ x)) ∷ [])
   }
 
 data ℤ₂ : Set where
@@ -90,25 +53,17 @@ _+′_ : ℤ₂ → ℤ₂ → ℤ₂
 +-comm #1 #0 = refl
 +-comm #1 #1 = refl
 
+open import Data.Sum
 
--- Want to instantiating in a more convenient way.
--- Maybe have a hidden instantiating record, and an open one that you sort
--- of run a function to to convert it
--- I think it might be a good idea to have the datatype abstract,
--- then I can for instance sort the operators/laws how I wish
 ℤ₂-Lava : Instance zero zero Lava
 ℤ₂-Lava = record 
   { setoid = setoid ℤ₂
   ; ⟦op⟧   = _+′_ ∷ []
-  ; ⟦law⟧  = (λ xs → +-comm (lookup zero xs) (lookup (suc zero) xs)) ∷ []
+  ; ⟦law⟧  = (λ x y → +-comm x y) ∷ []
+  ; ⟦cong⟧ = inj₂ (λ {ne} {x} → cong₂ _+′_ {x}) ∷ []
   }
 
-
-
--- Cannot do uncurry on this one (loses dependency information somehow)
--- Uncurry this in the interpretation instead (trickier, but doable)
-
--- Commutativity : ∀ x y → x +′ y ≡ y +′ x
--- Commutativity x y = par-lookup (Instance.⟦law⟧ ℤ₂-Lava) zero (x ∷ y ∷ []) 
+Commutativity : ∀ x y → x +′ y ≡ y +′ x
+Commutativity = par-lookup (fromParList (Instance.⟦law⟧ ℤ₂-Lava)) zero
 
 

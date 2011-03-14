@@ -8,7 +8,7 @@ open import Data.Nat.Comparison-Properties
 open import Level
 open import Relation.Binary 
 open import Relation.Binary.PropositionalEquality renaming (setoid to Set→Setoid)
-open import Data.Fin renaming (_<_ to _<Fin_ ; _≤_ to _≤Fin_)
+open import Data.Fin renaming (_<_ to _<Fin_ ; _≤_ to _≤Fin_ ; pred to Fin-pred)
 open import Data.Vec
 open import Data.Product renaming (map to _⋆_)
 open import Data.Vec.N-ary
@@ -28,15 +28,15 @@ data Expr (v : ℕ) : Set where
   op  : (x : Fin ops) (args : Vec (Expr v) (lookup x α)) → Expr v
 
 data Equality (v : ℕ) : Set where
-  _==_ : (lhs rhs : Expr v) → Equality v
+  _==_ : (lhs rhs : Expr (suc v)) → Equality v
 
 private
   Env : (v n : ℕ) → Set
-  Env v n = Vec (Expr v) n
+  Env v n = Vec (Expr (suc v)) n
    
   law-type : (v n : ℕ) → Set₁
   law-type v zero    = Set
-  law-type v (suc n) = Expr v → law-type v n
+  law-type v (suc n) = Expr (suc v) → law-type v n
    
   law-run′ : (v n : ℕ) → law-type v n
   law-run′ v zero    = Equality v
@@ -44,14 +44,14 @@ private
    
   law-∀ : (v n : ℕ) → law-type v n → Set
   law-∀ v zero    P = P
-  law-∀ v (suc n) P = (x : Expr v) → law-∀ v n (P x)
+  law-∀ v (suc n) P = (x : Expr (suc v)) → law-∀ v n (P x)
    
   law-run″ : (v n : ℕ) → Env v n → law-∀ v n (law-run′ v n) → Equality v
   law-run″ v zero    Γ        = λ xs → xs
   law-run″ v (suc n) (x ∷ xs) = λ f → law-run″ v n xs (f x)
    
-  law-run : (v : ℕ) → law-∀ v v (law-run′ v v) → Equality v
-  law-run v = law-run″ v v (Data.Vec.map var (allFin v))
+  law-run : (v : ℕ) → law-∀ v (suc v) (law-run′ v (suc v)) → Equality v
+  law-run v = law-run″ v (suc v) (Data.Vec.map var (allFin (suc v)))
    
   -- Arity of an operator, indexed by a comparison
   arity : ∀ {n} → n < ops → ℕ
@@ -70,12 +70,12 @@ private
   -- The runner type
   run-type : (n : ℕ) (p : n ≤ ops) → type n p
    
-  run-type zero    p = List (∃ λ v → (law-∀ v v (law-run′ v v)))
+  run-type zero    p = List (∃ λ v → (law-∀ v (suc v) (law-run′ v (suc v))))
   run-type (suc n) p = λ f → run-type n (↓ p) 
    
   -- Runner
   run : (n : ℕ) (p : n ≤ ops) → ∀′ n p (run-type n p) → List (∃ Equality) 
-  run zero    p = λ xs → Data.List.map (λ x → proj₁ x , law-run (proj₁ x) (proj₂ x) ) xs
+  run zero    p = λ xs → Data.List.map (λ x → (proj₁ x) , law-run  (proj₁ x) (proj₂ x ) ) xs
   run (suc n) p = λ f → run n (↓ p) (f (λ {v} → makeOp (arity p) (op {v} (fromℕ≤ p))))
    
 -- To build, start from the beginning
