@@ -24,6 +24,7 @@ open import Data.ParallelList
 open import Data.SimpleN-ary
 
 import Data.Vec.Pi-ary as Pi
+import Algebra.Interpret as Interpret
 
 record Structure : Set where
   field 
@@ -46,13 +47,13 @@ record Instance c ℓ (S : Structure) : Set (suc (c ⊔ ℓ)) where
   
   -- easy to work with (in the interpreter), hard to instantiate
   field
-    ⟦op⟧ : ParVec (λ n → Op n X) (fromList arities)
+    ⟦op⟧ : ParList (λ n → Op n X) arities
 
-  open Interpret c ℓ setoid (par-lookup ⟦op⟧)
+  open Interpret arities c ℓ setoid ⟦op⟧
 
   -- easy to define, hard to instantiate
   field
-    ⟦law⟧ : ParList (λ x → {!∀ⁿ (proj₁ x) (⟦_⟧″ {proj₁ x} (proj₂ x))!}) laws -- (Pi.πcurryⁿ ⟦ proj₂ x ⟧′)) laws --  ⟦ proj₂ x ⟧′ xs) laws
+    ⟦law⟧ : ParList (λ x → {!⟦ proj₂ x ⟧!}) laws 
 
 -- This friendly little function does not work too well :(
   
