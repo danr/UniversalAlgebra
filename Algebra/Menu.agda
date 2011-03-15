@@ -22,7 +22,6 @@ open import Function
 open import Data.ParallelVector
 open import Data.ParallelList
 open import Data.SimpleN-ary
-open import Data.Sum
 
 import Data.Vec.Pi-ary as Pi
 import Algebra.Interpret as Interpret
@@ -38,6 +37,16 @@ record Structure : Set where
 
   open Builder arities public
 
+NonZero : (xs : List ℕ) → List (∃ λ n → n ≢ 0)
+NonZero [] = []
+NonZero (zero ∷ xs) = NonZero xs
+NonZero (suc n ∷ xs) = (suc n , λ ()) ∷ NonZero xs
+
+ParNonZero : ∀ {i} {B : ℕ → Set i} (xs : List ℕ) → ParList B xs → ParList (λ x → B (proj₁ x)) (NonZero xs)
+ParNonZero [] [] = []
+ParNonZero (zero  ∷ xs) (p ∷ ps) = ParNonZero xs ps
+ParNonZero (suc n ∷ xs) (p ∷ ps) = p ∷ ParNonZero xs ps
+
 record Instance c ℓ (S : Structure) : Set (suc (ℓ ⊔ c)) where
   open Structure S 
 
@@ -51,12 +60,13 @@ record Instance c ℓ (S : Structure) : Set (suc (ℓ ⊔ c)) where
 
   open Interpret arities c ℓ setoid ⟦op⟧
 
+  ⟦op⁺⟧ : ParList (λ n → Op (proj₁ n) X) (NonZero arities)
+  ⟦op⁺⟧ = ParNonZero arities ⟦op⟧
+
+  -- Need pattern matching on record constructors!
   field
-    ⟦law⟧ : ParList (λ x → ⟦ proj₂ x ⟧‴) laws
-
-    -- use filter to filter out those with arities ≢ 0
-
-    ⟦cong⟧ : ParList (λ x → proj₁ x ≡ 0 ⊎ ({ne : proj₁ x ≢ 0} → congr≢ (proj₁ x) ne (proj₂ x) )) (toFlatList ⟦op⟧)
+    ⟦law⟧ : ParList (λ x → ⟦ proj₂ x ⟧) laws
+    ⟦cong⟧ : ParList (λ x → congr≢ (proj₁ (proj₁ x)) (proj₂ (proj₁ x)) (proj₂ x)) (toFlatList ⟦op⁺⟧)
 
 
 module ImplicitBuilder {arities : List ℕ} where
