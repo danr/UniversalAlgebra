@@ -1,1 +1,7 @@
-:)
+Algebra.Instance : how to define algebraic structures
+Algebra.Test     : how to instansiate them
+
+uses Agda 2.2.10, stdlib 0.5
+
+dependens on Data.Vec.Pi-ary from finite-prover:
+https://github.com/agda/agda-finite-prover
