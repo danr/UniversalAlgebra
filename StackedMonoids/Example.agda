@@ -17,6 +17,8 @@ open import Algebra.Structures
 
 module N = CommutativeSemiring commutativeSemiring 
 
+-- We just stack _+_ and _*_ monoids on top of each other.
+-- Note that we cannot use any distributivity in the laws
 add-mul-stacked-monoid : StackedMonoid z z 2
 add-mul-stacked-monoid = stackMonoid (setoid ℕ) 
                          (0 ∷ 1 ∷ []) 
@@ -25,12 +27,34 @@ add-mul-stacked-monoid = stackMonoid (setoid ℕ)
                          (N.+-identity ∷ N.*-identity ∷ []) 
                          ((λ eq eq′ → cong₂ _+_ eq eq′) ∷ (λ eq eq′ → cong₂ _*_ eq eq′) ∷ [])
 
+-- Open the solver
 import StackedMonoids.Solver as S
 open S add-mul-stacked-monoid
 
+infix 10 _:+_ _:*_
+
+-- These should come for free (somehow)
+_:+_ : ∀ {v} → Expr {v} → Expr {v} → Expr {v}
+x :+ y = x [ # 0 ] y
+
+_:*_ : ∀ {v} → Expr {v} → Expr {v} → Expr {v}
+x :* y = x [ # 1 ] y
+
+:0 : ∀ {v} → Expr {v}
+:0 = ε (# 0)
+
+:1 : ∀ {v} → Expr {v}
+:1 = ε (# 1)
+
+-- Some examples
 ex₁ : 0 + 0 ≡ 0
-ex₁ = solve₁ 0 (ε (# 0) [ # 0 ] ε (# 0) := ε (# 0)) ≡-refl
+ex₁ = solve 0 (:0 :+ :0 := :0) ≡-refl
 
 ex₂ : (x : ℕ) → x * (x * x) ≡ (x * x) * x
-ex₂ = solve 1 (λ x → (x [ # 1 ] (x [ # 1 ] x)) 
-                 := ((x [ # 1 ] x) [ # 1 ] x)) ≡-refl
+ex₂ = solve 1 (λ x → x :* (x :* x) := (x :* x) :* x) ≡-refl
+
+ex₃ : (a b c d e : ℕ) → (a + ((b * c) * d)) + e 
+                      ≡ a + (b * (c * (d * 1)) + (e + 0))
+ex₃ = solve 5 (λ a b c d e → ((a :+ ((b :* c) :* d)) :+ e)
+                          := (a :+ ((b :* (c :* (d :* :1))) :+ (e :+ :0)))) ≡-refl
+                           
