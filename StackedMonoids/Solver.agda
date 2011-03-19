@@ -21,11 +21,9 @@ open import Relation.Nullary
 open StackedMonoid SM public   
 open FP _≈_
 
-module VariableReader (v : ℕ) where
+module VariableReader {v : ℕ} where
 
   open Operations (Fin v) (Fin m) _≟_
-  
-  -- Standard procedure
   
   data Expr : Set where
     var : (x : Fin v) → Expr
@@ -86,3 +84,11 @@ module VariableReader (v : ℕ) where
   correct (ε x)         Γ = refl
   correct (e₁ [ ∙ ] e₂) Γ = trans (homomorphic ∙ (normalise e₁) (normalise e₂) Γ) 
                                   (cong ∙ (correct e₁ Γ) (correct e₂ Γ))
+
+open VariableReader
+
+import Relation.Binary.Reflection as Reflection
+open import Relation.Binary
+
+open Reflection universe var ⟦_⟧ (λ e Γ → ⟦ normalise e ⟧′ Γ) correct 
+  public renaming (_⊜_ to _:=_)

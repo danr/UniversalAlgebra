@@ -23,7 +23,7 @@ open import Level
 
 infixr 5 _∷_
 
-data ParVec {i} {j} {A : Set i} (B : A → Set j) : {n : ℕ} → Vec A n → Set (suc (i ⊔ j)) where
+data ParVec {i} {j} {A : Set i} (B : A → Set j) : {n : ℕ} → Vec A n → Set ((i ⊔ j)) where
   []  : ParVec B []
   _∷_ : ∀ {n x} {xs : Vec A n} (p : B x) (ps : ParVec B xs) → ParVec B (x ∷ xs)
 
