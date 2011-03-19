@@ -21,7 +21,7 @@ open Alg.CommutativeSemiring commutativeSemiring hiding (_*_ ; _+_)
   ; ⟦op⟧   = _*_ ∷ _+_ ∷ 1 ∷ 0 ∷ []
   ; ⟦law⟧  = +-assoc
            ∷ proj₂ +-identity 
-           ∷ proj₁ +-identity 
+           ∷ proj₁ +-identity
            ∷ +-comm 
            ∷ *-assoc
            ∷ proj₂ *-identity 
@@ -32,7 +32,7 @@ open Alg.CommutativeSemiring commutativeSemiring hiding (_*_ ; _+_)
            ∷ proj₂ zero
            ∷ proj₁ zero
            ∷ []
-  ; ⟦cong⟧ = (λ eq eq′ → *-cong eq eq′)
+  ; ⟦cong⟧ = (λ eq eq′ → *-cong eq eq′)  -- skapa en egen cons 
            ∷ (λ eq eq′ → +-cong eq eq′)
            ∷ []
   }
