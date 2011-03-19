@@ -7,9 +7,10 @@ module StackedMonoids.NodeDecoratedListTree where
 
 open import Data.Bool using (if_then_else_)
 open import Data.List using (List ; _∷_ ; [] ; [_] ; _++_)
-open import Relation.Nullary.Decidable using (⌊_⌋)
-open import Relation.Binary using (Decidable)
+
 open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Nullary.Decidable            using (⌊_⌋)
+open import Relation.Binary                       using (Decidable)
 
 data NLT (A N : Set) : Set where
   leaf   : (x : A) → NLT A N
@@ -17,7 +18,7 @@ data NLT (A N : Set) : Set where
   
 module Operations (A N : Set) (_≟_ : Decidable (_≡_ {A = N})) where
 
-  _≟_then_else_ : ∀ {A : Set} → N → N → A → A → A
+  _≟_then_else_ : ∀ {X} → N → N → X → X → X
   n ≟ n′ then x else y = if ⌊ n ≟ n′ ⌋ then x else y
 
   -- Union of two decorated trees under a certain node type n₀

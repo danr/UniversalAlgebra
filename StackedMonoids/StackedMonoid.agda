@@ -1,10 +1,9 @@
 {-# OPTIONS --universe-polymorphism #-}
 module StackedMonoids.StackedMonoid where
 
-open import Data.Nat hiding (_⊔_)
-open import Data.Fin
-open import Relation.Binary
-open import Level
+open import Data.Fin        
+open import Relation.Binary 
+open import Level           
 
 import Algebra.FunctionProperties as FP
 
@@ -13,7 +12,7 @@ open FP using (Op₂)
 -- A stacked monoid of n is n identity elmenets, n binary operators.
 -- Futhermore each operator is associative, each operator has
 -- a corresponding identity elmenent. Also, each operator is a congruence.
-record StackedMonoid c ℓ (n : ℕ) : Set (suc (c ⊔ ℓ)) where
+record StackedMonoid c ℓ n : Set (suc (c ⊔ ℓ)) where
   field
     universe : Setoid c ℓ
   
@@ -32,14 +31,15 @@ record StackedMonoid c ℓ (n : ℕ) : Set (suc (c ⊔ ℓ)) where
 -- Instantiating the record without pattern-matching on Fins (which is ugly)
 -- We use parallell vectors instead
 
-open import Data.Vec 
-open import Data.ParallelVector
-open import Data.Product hiding (map ; zip)
-open import Function
 open import Relation.Binary.PropositionalEquality
 
+open import Data.Vec            using (Vec ; _∷_ ; lookup ; [] ; zip)
+open import Data.ParallelVector using (ParVec ; par-lookup)
+open import Data.Product        using (proj₁ ; proj₂ ; uncurry) 
+open import Function            using (flip)
+
 -- Helper functions to initialise a record of n stacked monoids
-module Interpret (n : ℕ) where
+module Interpret n where
   
   ⟦_⟧ : ∀ {i} → Set i → Set i
   ⟦ X ⟧ = Vec X n
@@ -52,13 +52,13 @@ module Interpret (n : ℕ) where
 
   -- The projections out of a zipped vectors doesn't come for free,
   -- hence these helper functions
-  proj₁-zip : ∀ {i j} {A : Set i} {B : Set j} {n : ℕ}
+  proj₁-zip : ∀ {i j n} {A : Set i} {B : Set j}
             → (x : Fin n) (xs : Vec A n) (ys : Vec B n)
             → proj₁ (lookup x (zip xs ys)) ≡ lookup x xs
   proj₁-zip zero    (x ∷ xs) (y ∷ ys) = refl
   proj₁-zip (suc n) (x ∷ xs) (y ∷ ys) = proj₁-zip n xs ys
 
-  proj₂-zip : ∀ {i j} {A : Set i} {B : Set j} {n : ℕ}
+  proj₂-zip : ∀ {i j n} {A : Set i} {B : Set j}
             → (x : Fin n) (xs : Vec A n) (ys : Vec B n)
             → proj₂ (lookup x (zip xs ys)) ≡ lookup x ys
   proj₂-zip zero    (x ∷ xs) (y ∷ ys) = refl
@@ -67,7 +67,7 @@ module Interpret (n : ℕ) where
 -- It's terrific that you can open records inside a type signature!
 -- So here we give a vector of identities and operators,
 -- and then that these respects the laws of associativity, identity and congruence.
-stackMonoid : ∀ {c ℓ} {n : ℕ} (universe : Setoid c ℓ)
+stackMonoid : ∀ {c ℓ n} (universe : Setoid c ℓ)
             → let open Setoid universe renaming (Carrier to X ; _≈_ to ≈)
                   open FP ≈
                   open Interpret n

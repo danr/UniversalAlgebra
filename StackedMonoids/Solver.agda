@@ -1,28 +1,22 @@
 {-# OPTIONS --universe-polymorphism #-}
-
-open import Data.Nat using (ℕ)
 open import StackedMonoids.StackedMonoid
-
 -- m is the number of stacked monads on top of each other
-module StackedMonoids.Solver {c} {ℓ} {m : ℕ} (SM : StackedMonoid c ℓ m) where
+module StackedMonoids.Solver {c} {ℓ} {m} (SM : StackedMonoid c ℓ m) where
 
 open import StackedMonoids.NodeDecoratedListTree
-import Algebra.FunctionProperties as FP
 
-open import Data.Fin
-open import Data.Fin.Props
-open import Data.Product
-open import Data.List using (List ; _∷_ ; [] ; [_] ; _++_)
-open import Data.Vec using (Vec ; lookup)
-
-open import Function using (_⟨_⟩_)
-
-open import Relation.Nullary
+open import Data.Fin         using (Fin)
+open import Data.Fin.Props   using (_≟_)
+open import Data.Product     using (proj₁ ; proj₂)
+open import Data.List        using (List ; _∷_ ; [] ; [_] ; _++_)
+open import Data.Vec         using (Vec ; lookup)
+open import Function         using (_⟨_⟩_)
+open import Relation.Nullary using (yes ; no)
 
 open StackedMonoid SM 
 
 -- The number of free variables are the same on all of these functions
-module VariableReader {v : ℕ} where
+module VariableReader {v} where
 
   -- This gives us the union _∪_⟨_⟩ of node decorated list trees
   open Operations (Fin v) (Fin m) _≟_
@@ -54,7 +48,7 @@ module VariableReader {v : ℕ} where
     -- A little cleaner to write without a fold. 
     -- The n here is the operator to use in between.
     ⟦_⟧″ : List Normal → Env → Fin m → X
-    ⟦ []     ⟧″ Γ n = id n                             -- Each operator has an identity
+    ⟦ []     ⟧″ Γ n = id n                     
     ⟦ x ∷ xs ⟧″ Γ n = ⟦ x ⟧′ Γ ⟨ op n ⟩ ⟦ xs ⟧″ Γ n
   
     ⟦_⟧′ : Normal → Env → X
@@ -62,7 +56,7 @@ module VariableReader {v : ℕ} where
     ⟦ branch n t ⟧′ Γ = ⟦ t ⟧″ Γ n
 
   -- Translating an expression to a normal form
-  -- Notice the uses of node decorated list tree union under the operator.
+  -- Notice the use of union under the operator
   normalise : Expr → Normal
   normalise (var x)       = leaf x
   normalise (ε x)         = branch x []
@@ -99,7 +93,7 @@ module VariableReader {v : ℕ} where
   
   -- Normalising an expression and evaluating it has the same semantics
   -- as evaluating the expression
-  correct : (e : Expr) (Γ : Env) → ⟦ normalise e ⟧′ Γ ≈ ⟦ e ⟧ Γ
+  correct : ∀ e Γ → ⟦ normalise e ⟧′ Γ ≈ ⟦ e ⟧ Γ
   correct (var x)       Γ = refl
   correct (ε x)         Γ = refl
   correct (e₁ [ ∙ ] e₂) Γ = trans (homomorphic ∙ (normalise e₁) (normalise e₂) Γ) 
@@ -110,7 +104,6 @@ open VariableReader public
 -- Now we can use the reflection primitives
 
 import Relation.Binary.Reflection as Reflection
-open import Relation.Binary
 
 open Reflection universe var ⟦_⟧ (λ e Γ → ⟦ normalise e ⟧′ Γ) correct 
   public renaming (_⊜_ to _:=_)
