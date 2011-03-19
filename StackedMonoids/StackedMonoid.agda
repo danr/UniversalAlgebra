@@ -77,22 +77,3 @@ stackMonoid n u ε ∙ assocs identities congs = record
     open Setoid u
     open FP _≈_
     open Interpret n
-
-open import Algebra.Structures
-
-fromMonoids : ∀ {c ℓ} {X : Set c} {_≈_ : Rel X ℓ} {n : ℕ}
-            → let open Interpret (suc n)
-              in (ε : ⟦ X ⟧) (∙ : ⟦ Op₂ X ⟧)
-               → ⟦ IsMonoid _≈_ ⟧″ ∙ ε
-               → StackedMonoid c ℓ (suc n)
-fromMonoids {X = X} {_≈_} {n} ε ∙ ms = record 
-  { universe = {!head ms!}
-  ; id       = {!!}
-  ; op       = {!!}
-  ; assoc    = {!!}
-  ; identity = {!!}
-  ; cong     = {!!}
-  }
-  where
-    open FP _≈_
-    open Interpret n 
