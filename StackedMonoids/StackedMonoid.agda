@@ -56,7 +56,7 @@ module Interpret (n : ℕ) where
   proj₂-zip (suc n) (x ∷ xs) (y ∷ ys) = proj₂-zip n xs ys
 
 -- One way of instantiating a stacked monoid without using the Fin-indexed functions
-stackMonoid : ∀ {c ℓ} (n : ℕ) (universe : Setoid c ℓ)
+stackMonoid : ∀ {c ℓ} {n : ℕ} (universe : Setoid c ℓ)
             → let open Setoid universe renaming (Carrier to X ; _≈_ to ≈)
                   open FP ≈
                   open Interpret n
@@ -65,7 +65,7 @@ stackMonoid : ∀ {c ℓ} (n : ℕ) (universe : Setoid c ℓ)
                → ⟦ Identity ⟧″ ε ∙
                → ⟦ (λ ⋆ → ⋆ Preserves₂ ≈ ⟶ ≈ ⟶ ≈) ⟧′ ∙ 
                → StackedMonoid c ℓ n
-stackMonoid n u ε ∙ assocs identities congs = record 
+stackMonoid {n = n} u ε ∙ assocs identities congs = record 
   { universe = u
   ; id       = flip lookup ε
   ; op       = flip lookup ∙

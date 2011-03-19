@@ -1,0 +1,17 @@
+
+-- Ideas:
+-- Enhance the NLT structure to parameterize over if the lists can be empty 
+-- This will correspond to identitites
+-- Also lists can be replaced to binary trees if the structure is not associative
+-- Commutativity seems in general to be hard,
+-- whereas associativity+commutativity is a multiset
+-- where 
+-- ∙ 1 or more elements if no identities
+-- ∙ 0 or more elmenets if identities
+-- ∙ ℤ if inverses
+-- ∙ abs max 1 if idempotent? (hmm)
+--
+-- However, it is not straightforward to represent bags/multisets.
+--
+-- Finally, what happens when we add distributivity and absorption?
+-- These are the most interesting laws: they allow ring and lattice solvers.
