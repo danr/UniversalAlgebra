@@ -18,11 +18,11 @@ open import Level
 
 infixr 5 _∷_
 
-data ParVec {i} {j} {A : Set i} (B : A → Set j) : ∀ {n} → Vec A n → Set (i ⊔ j) where
+data ParVec {i j} {A : Set i} (B : A → Set j) : ∀ {n} → Vec A n → Set (i ⊔ j) where
   []  : ParVec B []
   _∷_ : ∀ {n x} {xs : Vec A n} (p : B x) (ps : ParVec B xs) → ParVec B (x ∷ xs)
 
-par-lookup : ∀ {n} {i} {j} {A : Set i} {B : A → Set j} 
+par-lookup : ∀ {n i j} {A : Set i} {B : A → Set j} 
             → {xs : Vec A n} → ParVec B xs → (x : Fin n) → B (lookup x xs)
 par-lookup []       ()
 par-lookup (p ∷ ps) zero    = p
@@ -48,7 +48,7 @@ private
   count-lookup (suc n) (suc i) = trans (suc-lookup n i (count n)) 
                                        (cong suc (count-lookup n i))
   
-uncount : ∀ {n} {i} {B : Fin n → Set i} → ParVec B (count n) → (x : Fin n) → B x
+uncount : ∀ {n i} {B : Fin n → Set i} → ParVec B (count n) → (x : Fin n) → B x
 uncount {n} {i} {B} xs x = subst B (count-lookup n x) (par-lookup xs x) 
 
 -- Some silly examples
