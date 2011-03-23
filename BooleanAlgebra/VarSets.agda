@@ -74,10 +74,14 @@ private
 ⋀-nothing F N = λ ()
 ⋀-nothing F F = λ ()
 
-{-
-∩-just : ∀ {n} v v′ {x : VS n} (vs vs′ : VS n) → (v ∷ vs ∩ v′ ∷ vs′ ≡ just x) → ∃₂ λ v″ vs″ → just v″ ≡ v ⋀ v′ × just vs″ ≡ vs ∩ vs″
-∩-just v v′ vs vs′ eq = {!!}
--}
+∩-just : ∀ {n} (v v′ : Member) {xs : VS (suc n)} (vs vs′ : VS n) 
+       → ((v ∷ vs) ∩ (v′ ∷ vs′)) ≡ (just xs)
+       → ∃₂ λ v″ vs″ → v ⋀ v′ ≡ just v″ × vs ∩ vs′ ≡ just vs″
+∩-just v v′ vs vs′ eq with v ⋀ v′ | vs ∩ vs′
+∩-just v v′ vs vs′ eq | just v″ | just vs″  = v″ , vs″ , refl , refl
+∩-just v v′ vs vs′ () | nothing | just _  
+∩-just v v′ vs vs′ () | nothing | nothing 
+∩-just v v′ vs vs′ () | just _  | nothing 
 
 maybeToList : ∀ {i} {A : Set i} → Maybe A → List A
 maybeToList (just x) = [ x ]
@@ -178,3 +182,4 @@ insert M′ Ms with necessary? M′ Ms
 _⋃_ : ∀ {n} → Meets n → Meets n → Meets n
 _⋃_ (M ∷ Ms) Ms′ = insert M (Ms ⋃ Ms′)
 _⋃_ []       Ms′ = Ms′
+
