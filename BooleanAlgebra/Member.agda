@@ -3,20 +3,21 @@ module BooleanAlgebra.Member where
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Data.Product
+open import Data.Maybe
 
 data Member : Set where
   T N F : Member
 
-_⋀_ : Member → Member → Member
-T ⋀ T = T
-T ⋀ N = F
-T ⋀ F = T
-N ⋀ T = F
-N ⋀ N = N
-N ⋀ F = N
-F ⋀ T = T
-F ⋀ N = N
-F ⋀ F = F
+_⋀_ : Member → Member → Maybe Member
+T ⋀ T = just T
+T ⋀ N = nothing
+T ⋀ F = just T
+N ⋀ T = nothing
+N ⋀ N = just N
+N ⋀ F = just N
+F ⋀ T = just T
+F ⋀ N = just N
+F ⋀ F = just F
 
 not : Member → Member
 not T = N

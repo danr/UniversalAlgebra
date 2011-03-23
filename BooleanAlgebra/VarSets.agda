@@ -1,3 +1,4 @@
+{-# OPTIONS --universe-polymorphism #-}
 module BooleanAlgebra.VarSets where
 
 open import Data.Nat hiding (_<_ ; compare)
@@ -11,6 +12,7 @@ open import Data.Product hiding (map)
 open import Data.Empty
 open import Relation.Nullary
 open import Relation.Nullary.Decidable hiding (map)
+open import Data.Sum
 
 open import BooleanAlgebra.Member
 
@@ -18,6 +20,7 @@ open import Function
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
+open import Data.Maybe
 
 open import Relation.Binary.List.StrictLex as Lex
 
@@ -33,9 +36,52 @@ singleton : ∀ {n} → Fin n → VS n
 singleton zero    = T ∷ replicate F
 singleton (suc n) = F ∷ singleton n
 
-_∩_ : ∀ {n} → VS n → VS n → VS n
-[]       ∩ []       = []
-(x ∷ xs) ∩ (y ∷ ys) = (x ⋀ y) ∷ xs ∩ ys
+
+_∩_ : ∀ {n} → VS n → VS n → Maybe (VS n)
+[]       ∩ []       = just []
+(x ∷ xs) ∩ (y ∷ ys) with (x ⋀ y) | (xs ∩ ys)
+... | just v | just vs = just (v ∷ vs)
+... | _      | _       = nothing
+
+private
+  ∩-lemma : ∀ {n} v v′ → (vs vs′ : VS n) → (v ∷ vs) ∩ (v′ ∷ vs′) ≡ nothing → vs ∩ vs′ ≡ nothing ⊎ v ⋀ v′ ≡ nothing
+  ∩-lemma v v′ vs vs′ eq with v ⋀ v′ | vs ∩ vs′
+  ∩-lemma v v′ vs vs′ () | just v″ | just vs″
+  ... | nothing | just vs″ = inj₂ refl
+  ... | _       | nothing  = inj₁ refl
+
+  jn : ∀ {A : Set} {x : Maybe A} {v : A} → x ≡ nothing → x ≡ just v → ∀ {Whatever : Set} → Whatever
+  jn {x = just _} () eq
+  jn {x = nothing}  eq ()
+
+∩-nothing : ∀ {n} → (vs vs′ : VS n) → vs ∩ vs′ ≡ nothing → ∃ λ i → lookup i vs  ⋀ lookup i vs′ ≡ nothing
+∩-nothing [] [] ()
+∩-nothing (x ∷ xs) (y ∷ ys) eq with inspect (x ⋀ y)
+... | nothing with-≡ eq′ = zero , eq′
+... | just v  with-≡ eq′ with ∩-lemma x y xs ys eq
+... | inj₂ eq″ = jn eq″ eq′
+... | inj₁ eq″ with ∩-nothing xs ys eq″
+... | i , eq‴ = suc i , eq‴
+
+⋀-nothing : ∀ x y → x ⋀ y ≡ nothing → (x ≡ T × y ≡ N) ⊎ (x ≡ N × y ≡ T)
+⋀-nothing T T = λ ()
+⋀-nothing T N = λ x' → inj₁ (refl , refl)
+⋀-nothing T F = λ ()
+⋀-nothing N T = λ x' → inj₂ (refl , refl)
+⋀-nothing N N = λ ()
+⋀-nothing N F = λ ()
+⋀-nothing F T = λ ()
+⋀-nothing F N = λ ()
+⋀-nothing F F = λ ()
+
+{-
+∩-just : ∀ {n} v v′ {x : VS n} (vs vs′ : VS n) → (v ∷ vs ∩ v′ ∷ vs′ ≡ just x) → ∃₂ λ v″ vs″ → just v″ ≡ v ⋀ v′ × just vs″ ≡ vs ∩ vs″
+∩-just v v′ vs vs′ eq = {!!}
+-}
+
+maybeToList : ∀ {i} {A : Set i} → Maybe A → List A
+maybeToList (just x) = [ x ]
+maybeToList nothing  = []
 
 Meets : ℕ → Set
 Meets n = List (VS n)
