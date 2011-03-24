@@ -42,3 +42,47 @@ lemma₃ {α} {β} {γ} {δ} eq = begin
     (γ ∧ α) ∧ (δ ∧ β)
   ∎
 
+lemma₄ : ∀ {x y z} → x ∨ y ≈ x → (z ∧ x) ∨ (z ∧ y) ≈ z ∧ x
+lemma₄ {x} {y} {z} eq = begin
+    (z ∧ x) ∨ (z ∧ y)    ≈⟨ sym (proj₁ ∧-∨-distrib z x y) ⟩
+    z ∧ (x ∨ y)          ≈⟨ refl ⟨ ∧-cong ⟩ eq ⟩
+    z ∧ x
+  ∎
+
+private
+  helper-lemma₅ : ∀ {x y z} → x ∨ y ≈ x → x ∨ (z ∧ y) ≈ x
+  helper-lemma₅ {x} {y} {z} eq = begin
+      x ∨ (z ∧ y)          ≈⟨ proj₁ ∨-∧-distrib x z y ⟩
+      (x ∨ z) ∧ (x ∨ y)    ≈⟨ refl ⟨ ∧-cong ⟩ eq ⟩
+      (x ∨ z) ∧ x          ≈⟨ ∧-comm _ _  ⟩
+      x ∧ (x ∨ z)          ≈⟨ proj₂ absorptive x z ⟩
+      x
+    ∎
+  
+lemma₅ : ∀ {x y z} → x ∨ y ≈ x → (⊤ ∧ x) ∨ (z ∧ y) ≈ ⊤ ∧ x
+lemma₅ {x} {y} {z} eq = begin
+    (⊤ ∧ x) ∨ (z ∧ y) ≈⟨ proj₁ C.∧-identity x ⟨ ∨-cong ⟩ refl ⟩     
+    x ∨ (z ∧ y)       ≈⟨ helper-lemma₅ eq ⟩
+    x                 ≈⟨ sym (proj₁ C.∧-identity x) ⟩
+    ⊤ ∧ x
+  ∎
+
+lemma₆ : ∀ {x y z} → x ∨ y ∨ z ≈ y ∨ x ∨ z
+lemma₆ {x} {y} {z} = begin
+    x ∨ y ∨ z       ≈⟨ sym (∨-assoc x y z) ⟩ -- sym (∧-assoc _ _ _) ⟩
+    (x ∨ y) ∨ z     ≈⟨ ∨-comm x y ⟨ ∨-cong ⟩ refl ⟩ -- ∧-comm _ _ ⟨ ∧-cong ⟩ refl ⟩
+    (y ∨ x) ∨ z     ≈⟨ ∨-assoc y x z ⟩ -- ∧-assoc _ _ _ ⟩
+    y ∨ x ∨ z
+  ∎
+
+
+
+{-
+begin
+    ?                 ≈⟨ ? ⟩
+    ?                 ≈⟨ ? ⟩
+    ?                 ≈⟨ ? ⟩
+    ?                 ≈⟨ ? ⟩
+    ?
+  ∎
+-}
