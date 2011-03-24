@@ -69,9 +69,9 @@ lemma₅ {x} {y} {z} eq = begin
 
 lemma₆ : ∀ {x y z} → x ∨ y ∨ z ≈ y ∨ x ∨ z
 lemma₆ {x} {y} {z} = begin
-    x ∨ y ∨ z       ≈⟨ sym (∨-assoc x y z) ⟩ -- sym (∧-assoc _ _ _) ⟩
-    (x ∨ y) ∨ z     ≈⟨ ∨-comm x y ⟨ ∨-cong ⟩ refl ⟩ -- ∧-comm _ _ ⟨ ∧-cong ⟩ refl ⟩
-    (y ∨ x) ∨ z     ≈⟨ ∨-assoc y x z ⟩ -- ∧-assoc _ _ _ ⟩
+    x ∨ y ∨ z       ≈⟨ sym (∨-assoc x y z) ⟩ 
+    (x ∨ y) ∨ z     ≈⟨ ∨-comm x y ⟨ ∨-cong ⟩ refl ⟩ 
+    (y ∨ x) ∨ z     ≈⟨ ∨-assoc y x z ⟩ 
     y ∨ x ∨ z
   ∎
 
