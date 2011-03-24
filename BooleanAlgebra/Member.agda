@@ -1,23 +1,24 @@
 module BooleanAlgebra.Member where
 
+open import Data.Maybe
+open import Data.Product
+
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
-open import Data.Product
-open import Data.Maybe
+
+-- T :   x is in the set
+-- N : ¬ x is in the set
+-- F :   x is not in the set
 
 data Member : Set where
   T N F : Member
 
 _⋀_ : Member → Member → Maybe Member
-T ⋀ T = just T
-T ⋀ N = nothing
-T ⋀ F = just T
-N ⋀ T = nothing
-N ⋀ N = just N
-N ⋀ F = just N
-F ⋀ T = just T
-F ⋀ N = just N
-F ⋀ F = just F
+T ⋀ N = nothing      --   x ∧ ¬ x ≈ ⊥
+N ⋀ T = nothing      -- ¬ x ∧   x ≈ ⊥
+T ⋀ m = just T       --   x ∧   x ≈   x ,   x ≈   x 
+N ⋀ m = just N       -- ¬ x ∧ ¬ x ≈ ¬ x , ¬ x ≈ ¬ x
+F ⋀ m = just m
 
 not : Member → Member
 not T = N
