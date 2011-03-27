@@ -4,7 +4,7 @@ module Data.ParallelList where
 open import Data.Product
 open import Data.ParallelVector
 open import Data.List renaming (_++_ to _++′_)
-open import Data.Vec hiding (_++_ ; tail)
+open import Data.Vec hiding (_++_ ; tail ; head)
 open import Level
 
 infixr 5 _∷_
@@ -31,6 +31,9 @@ module PL {i} {j} {A : Set i} {B : A → Set j} where
 
   tail : {x : A} {xs : List A} → ParList B (x ∷ xs) → ParList B xs
   tail (p ∷ ps) = ps
+
+  head : {x : A} {xs : List A} → ParList B (x ∷ xs) → B x
+  head (p ∷ ps) = p
 
 open PL public
 
