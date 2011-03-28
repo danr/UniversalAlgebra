@@ -3,17 +3,9 @@ open import Algebra
 
 module DLSolver.DNF-Sort {δ₁ δ₂} (DL : DistributiveLattice δ₁ δ₂) where
 
-open import Data.Nat hiding (_≤?_)
-open import Data.Fin hiding (compare)
-open import Data.Vec hiding ([_] ; _>>=_ ; _++_ ; foldr) renaming (map to V-map)
-open import Data.List hiding (replicate ; [_])
 open import Data.List.NonEmpty
-open import Data.Product hiding (map)
-
 open import Function
-
 open import Relation.Nullary
-open import Relation.Binary
 
 open import DLSolver.VarSets
 open import DLSolver.DNF
@@ -22,30 +14,37 @@ open DistributiveLattice DL renaming (Carrier to X)
 import DLSolver.Eval as Eval; open Eval DL
 import DLSolver.Lemmas as Lemmas; open Lemmas DL
 
-insert : ∀ {n} → VS n → Meets n → Meets n
-insert M′ [ M ]    with VStoList M′ ≤? VStoList M
-... | yes p = M  ∷ [ M′ ]
-... | no ¬p = M′ ∷ [ M ]
-insert M′ (M ∷ Ms) with VStoList M′ ≤? VStoList M 
-... | yes p = M  ∷ insert M′ Ms
-... | no ¬p = M′ ∷ M ∷ Ms 
+------------------------------------------------------------------------
+-- Insertion sorting the DNF to make normal forms set equivalent.
+-- Notice that it is not proved that this insertion sort actually sorts 
+-- the list, though I think it would be necessary to prove completeness.
 
-sort : ∀ {n} → Meets n → Meets n
-sort [ M ]    = [ M ]
-sort (M ∷ Ms) = insert M (sort Ms) 
+insert : ∀ {n} → VS n → DNF n → DNF n
+insert m′ [ m ]    with VStoList m′ ≤? VStoList m
+... | yes p = m  ∷ [ m′ ]
+... | no ¬p = m′ ∷ [ m ]
+insert m′ (m ∷ ms) with VStoList m′ ≤? VStoList m 
+... | yes p = m  ∷ insert m′ ms
+... | no ¬p = m′ ∷ m ∷ ms 
 
-insert-correct : ∀ {n} (Γ : Env n) v vs
-               → ⟦ v ⟧″ Γ ∨ ⟦ vs ⟧′ Γ ≈ ⟦ insert v vs ⟧′ Γ
-insert-correct Γ M′ [ M ] with VStoList M′ ≤? VStoList M
+sort : ∀ {n} → DNF n → DNF n
+sort [ m ]    = [ m ]
+sort (m ∷ ms) = insert m (sort ms) 
+
+------------------------------------------------------------------------
+-- Sorting the DNF still yields the same value
+
+insert-correct : ∀ {n} (Γ : Env n) (m′ : VS n) (ms : DNF n)
+               → ⟦ m′ ⟧″ Γ ∨ ⟦ ms ⟧′ Γ ≈ ⟦ insert m′ ms ⟧′ Γ
+insert-correct Γ m′ [ m ] with VStoList m′ ≤? VStoList m
 ... | yes p = ∨-comm _ _
 ... | no ¬p = refl
-insert-correct Γ M′ (M ∷ Ms) with VStoList M′ ≤? VStoList M
-... | yes p = lemma₆ 
-            ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ insert-correct Γ M′ Ms)
+insert-correct Γ m′ (m ∷ ms) with VStoList m′ ≤? VStoList m
+... | yes p = lemma₆ ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ insert-correct Γ m′ ms)
 ... | no ¬p = refl
 
-sort-correct : ∀ {n} (Γ : Env n) vs
-             → ⟦ vs ⟧′ Γ ≈ ⟦ sort vs ⟧′ Γ
-sort-correct Γ [ M ]    = refl
-sort-correct Γ (M ∷ Ms) = refl ⟨ ∨-cong ⟩ sort-correct Γ Ms 
-                        ⟨ trans ⟩ insert-correct Γ M (sort Ms)
+sort-correct : ∀ {n} (Γ : Env n) (ms : DNF n)
+             → ⟦ ms ⟧′ Γ ≈ ⟦ sort ms ⟧′ Γ
+sort-correct Γ [ m ]    = refl
+sort-correct Γ (m ∷ ms) = refl ⟨ ∨-cong ⟩ sort-correct Γ ms ⟨ trans ⟩ 
+                          insert-correct Γ m (sort ms)

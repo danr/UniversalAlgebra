@@ -3,15 +3,8 @@ open import Algebra
 
 module DLSolver.Solver {δ₁ δ₂} (DL : DistributiveLattice δ₁ δ₂) where
 
-open import Data.Fin
-open import Data.Nat
-open import Data.Product renaming (map to _⋆_)
-open import Data.Vec 
-open import Data.List hiding (and ; or)
-
 open import Function
 
-open import DLSolver.VarSets
 open import DLSolver.DNF
 
 open DistributiveLattice DL renaming (Carrier to X)
@@ -23,37 +16,46 @@ import DLSolver.Redundancies as Red;         open Red DL
 
 import Relation.Binary.Reflection as Reflection
 
-NF : ∀ {n} (e : Expr n) → Meets n
-NF = sort ∘ removeRedundancies ∘ DNF
+------------------------------------------------------------------------
+-- The normal form is a sorted, irredundant DNF
 
-NF-correct : ∀ {n} (e : Expr n) (Γ : Env n) → ⟦ e ⟧ Γ ≈ ⟦ NF e ⟧′ Γ
-NF-correct e Γ = DNF-correct Γ e 
-               ⟨ trans ⟩ rmReds-correct Γ (DNF e) 
-               ⟨ trans ⟩ sort-correct Γ (removeRedundancies (DNF e))
+NF : ∀ {n} (e : Expr n) → DNF n
+NF = sort ∘ removeRedundancies ∘ toDNF
 
-open Reflection setoid var ⟦_⟧ (λ e Γ → ⟦ NF e ⟧′ Γ) (λ e Γ → sym (NF-correct e Γ))
+NF-correct : ∀ {n} (e : Expr n) (Γ : Env n) → ⟦ NF e ⟧′ Γ ≈ ⟦ e ⟧ Γ
+NF-correct e Γ = sym (toDNF-correct Γ e ⟨ trans ⟩ 
+                      rmReds-correct Γ (toDNF e) ⟨ trans ⟩ 
+                      sort-correct Γ (removeRedundancies (toDNF e)))
+
+------------------------------------------------------------------------
+-- Opening the reflection primitives
+
+open Reflection setoid var ⟦_⟧ (λ e Γ → ⟦ NF e ⟧′ Γ) (λ e Γ → NF-correct e Γ)
   public renaming (_⊜_ to _:=_)
 
+------------------------------------------------------------------------
 -- Some examples
 private
   
-  ex₁ : ∀ x y z → x ∧ (y ∧ z) ≈ (z ∧ y) ∧ (x ∧ z)
-  ex₁ = solve 3 (λ x y z → x and (y and z) := (z and y) and (x and z)) refl
-  
-  ex₂ : ∀ a b c d → (a ∧ b) ∧ (c ∧ d) 
-                  ≈ (a ∧ c) ∧ (b ∧ d)
-  ex₂ = solve 4 (λ a b c d → (a and b) and (c and d) 
-                          := (a and c) and (b and d)) refl
-  
-  ex₃ : ∀ x y z → x ∨ y ∨ z ≈ y ∨ x ∨ z
-  ex₃ = solve 3 (λ x y z → x or y or z := y or x or z) refl
-  
   -- General distributivity
-  ex₄ : ∀ x y z → (x ∧ y) ∨ (y ∧ z) ∨ (z ∧ x) ≈ (x ∧ y) ∨ (y ∧ z) ∨ (z ∧ x) 
-  ex₄ = solve 3 (λ x y z → (x and y) or (y and z) or (z and x) 
+  ex₁ : ∀ x y z → (x ∧ y) ∨ (y ∧ z) ∨ (z ∧ x) ≈ (x ∧ y) ∨ (y ∧ z) ∨ (z ∧ x) 
+  ex₁ = solve 3 (λ x y z → (x and y) or (y and z) or (z and x) 
                         := (x and y) or (y and z) or (z and x)) refl
   
-  -- Modular
-  ex₅ : ∀ a b x → (x ∧ b) ∨ (a ∧ b) ≈ ((x ∧ b) ∨ a) ∧ b
-  ex₅ = solve 3 (λ a b x → (x and b) or (a and b)
+  -- Modular law
+  ex₂ : ∀ a b x → (x ∧ b) ∨ (a ∧ b) ≈ ((x ∧ b) ∨ a) ∧ b
+  ex₂ = solve 3 (λ a b x → (x and b) or (a and b)
                         := ((x and b) or a) and b) refl
+
+  -- Testing the redundancy remover a little
+  ex₃ : ∀ x y z → x ∨ (x ∧ y) ∨ (x ∧ z) ∨ (x ∧ y ∧ z) ∨ (y ∧ z) ≈ x ∨ (y ∧ z)
+  ex₃ = solve 3 (λ x y z → x or (x and y) or (x and z) or (x and y and z) or (y and z) 
+                        := x or (y and z)) refl
+
+  -- Takes about a minute to type check on my computer
+  ex₄ : ∀ x₁ x₂ x₃ x₄ x₅ y₁ y₂ y₃ y₄ y₅ 
+      → (x₁ ∨ y₁) ∧ (x₂ ∨ y₂) ∧ (x₃ ∨ y₃) ∧ (x₄ ∨ y₄) ∧ (x₅ ∨ y₅)
+      ≈ (x₃ ∨ y₃) ∧ (x₄ ∨ y₄) ∧ (x₅ ∨ y₅) ∧ (x₁ ∨ y₁) ∧ (x₂ ∨ y₂) 
+  ex₄ = solve 10 (λ x₁ x₂ x₃ x₄ x₅ y₁ y₂ y₃ y₄ y₅
+           → (x₁ or y₁) and (x₂ or y₂) and (x₃ or y₃) and (x₄ or y₄) and (x₅ or y₅)
+          := (x₃ or y₃) and (x₄ or y₄) and (x₅ or y₅) and (x₁ or y₁) and (x₂ or y₂)) refl

@@ -3,24 +3,20 @@ open import Algebra
 
 module DLSolver.Redundancies {δ₁ δ₂} (DL : DistributiveLattice δ₁ δ₂) where
 
-open import Data.Nat 
-open import Data.Fin 
-open import Data.Vec hiding ([_] ; _>>=_ ; _++_ ; foldr ; tail ; head ; _∈_ ; drop ; toList ; last) renaming (map to V-map)
-open import Data.List hiding (replicate ; drop ; [_]) renaming (monad to []-monad)
+open import Data.Vec using (_∷_ ; [])
 open import Data.List.NonEmpty hiding (tail ; head ; SnocView ; last)
 open import Data.List.Any as Any hiding (tail ; map)
 open Any.Membership-≡ hiding (_⊆_ ; _⊈_)
 open import Data.ParallelList
-open import Data.Product hiding (map)
-open import Data.Empty renaming (⊥ to ∅ ; ⊥-elim to ∅-elim)
+open import Data.Product 
+open import Data.Empty 
 
 open import Function
 
 open import Relation.Binary
 open import Relation.Nullary hiding (¬_)
-open import Relation.Nullary.Decidable hiding (map)
-open import Relation.Binary.PropositionalEquality 
-  renaming (trans to ≡-trans ; refl to ≡-refl ; sym to ≡-sym)
+
+open import Relation.Binary.PropositionalEquality hiding (trans ; sym) renaming (refl to ≡-refl)
 
 open import DLSolver.VarSets
 open import DLSolver.DNF
@@ -29,138 +25,162 @@ open DistributiveLattice DL renaming (Carrier to X)
 import DLSolver.Eval as Eval; open Eval DL
 import DLSolver.Lemmas as Lemmas; open Lemmas DL
 
--- We have meets : M₁ ∧ M₂ ∧ ... ∧ Mn
--- M′ is redundant if ∃ i . Mi ⊆ M′
--- We say M′ is necessary if ∀ i . Mi ⊈ M′
+------------------------------------------------------------------------
+-- Say we have a DNF formula m₁ ∧ m₂ ∧ … ∧ mn.
+-- Then m′ is redundant if ∃ λ i → mi ⊆ m′
+-- Converesly, We say m′ is necessary if ∀ i → mi ⊈ m
+--
+-- Say m ⊆ m′, then m′ is redundant because for some ai and bi we have:
+-- m  = a₁ ∧ … ∧ an
+-- m′ = a₁ ∧ … ∧ an ∧ b₁ ∧ … ∧ bn′  (since it is a superset of the vars)
+-- Let's denote m′ = m ∧ b
+-- Then m v m′ ≈ m ∨ (m ∧ b) ≈ m, by absorption, so m′ is indeed redundant.
 
-Necessary : ∀ {n} → VS n → Meets n → Set
-Necessary M′ Ms = ParList (λ M → M ⊈ M′) (toList Ms)
+Necessary : ∀ {n} → VS n → DNF n → Set
+Necessary m′ ms = ParList (λ m → m ⊈ m′) (toList ms)
 
-Redundant : ∀ {n} → VS n → Meets n → Set
-Redundant M′ Ms = ∃ λ M → M ∈ (toList Ms) × M ⊆ M′
+Redundant : ∀ {n} → VS n → DNF n → Set
+Redundant m′ ms = ∃ λ m → m ∈ toList ms × m ⊆ m′
 
+------------------------------------------------------------------------
+-- We can constructively show that we cannot both have necessity and 
+-- redundancy at the same time.
 
--- As expected, they are inverses of each other.
-¬Necessary→Redundant : ∀ {n} (M′ : VS n) (Ms : Meets n) → (Necessary M′ Ms → ∅) → Redundant M′ Ms
-¬Necessary→Redundant M′ [ M ]    ¬Nec with M ⊆? M′
-... | yes p = M , here ≡-refl , p
-... | no ¬p = ∅-elim (¬Nec (¬p ∷ []))
-¬Necessary→Redundant M′ (M ∷ Ms) ¬Nec with M ⊆? M′
-... | yes p = M , here ≡-refl , p
-... | no ¬p with ¬Necessary→Redundant M′ Ms (λ ¬ps → ¬Nec (¬p ∷ ¬ps))
-... | M' , M'∈Ms , M'⊆M′ = M' , there M'∈Ms , M'⊆M′
+¬Necessary→Redundant : ∀ {n} (m′ : VS n) (ms : DNF n) → (Necessary m′ ms → ⊥) → Redundant m′ ms
+¬Necessary→Redundant m′ [ m ]    ¬Nec with m ⊆? m′
+... | yes p = m , here ≡-refl , p
+... | no ¬p = ⊥-elim (¬Nec (¬p ∷ []))
+¬Necessary→Redundant m′ (m ∷ ms) ¬Nec with m ⊆? m′
+... | yes p = m , here ≡-refl , p
+... | no ¬p with ¬Necessary→Redundant m′ ms (λ ¬ps → ¬Nec (¬p ∷ ¬ps))
+... | m' , m'∈ms , m'⊆m′ = m' , there m'∈ms , m'⊆m′
 
-¬Redundant→Necessary : ∀ {n} (M′ : VS n) (Ms : Meets n) → (Redundant M′ Ms → ∅) → Necessary M′ Ms
-¬Redundant→Necessary M′ [ M ]    ¬Red = (λ M⊆M′ → ¬Red (M , here ≡-refl , M⊆M′)) ∷ []
-¬Redundant→Necessary M′ (M ∷ Ms) ¬Red = (λ M⊆M′ → ¬Red (M , here ≡-refl , M⊆M′)) 
-                                      ∷ ¬Redundant→Necessary M′ Ms 
+¬Redundant→Necessary : ∀ {n} (m′ : VS n) (ms : DNF n) → (Redundant m′ ms → ⊥) → Necessary m′ ms
+¬Redundant→Necessary m′ [ m ]    ¬Red = (λ m⊆m′ → ¬Red (m , here ≡-refl , m⊆m′)) ∷ []
+¬Redundant→Necessary m′ (m ∷ ms) ¬Red = (λ m⊆m′ → ¬Red (m , here ≡-refl , m⊆m′)) 
+                                      ∷ ¬Redundant→Necessary m′ ms 
                                               (λ xs → ¬Red ( proj₁ xs
                                                            , there (proj₁ (proj₂ xs)) 
                                                            , proj₂ (proj₂ xs)))
 
+Redundant∧Necessary→⊥ : ∀ {n} (m′ : VS n) (ms : DNF n) → Redundant m′ ms → Necessary m′ ms → ⊥
+Redundant∧Necessary→⊥ m′ [ m ]     (_  , there () , _)  _ 
+Redundant∧Necessary→⊥ m′ [ m ]     (.m , here ≡-refl , m⊆m′)  (p ∷ []) = p m⊆m′
+Redundant∧Necessary→⊥ m′ (m  ∷ ms) (.m , here ≡-refl , m⊆m′)  (p ∷ ps) = p m⊆m′
+Redundant∧Necessary→⊥ m′ (m″ ∷ ms) (m  , there pxs   , m⊆m′) (p ∷ ps) 
+                                         = Redundant∧Necessary→⊥ m′ ms (m , pxs , m⊆m′) ps
 
-Redundant∧Necessary→∅ : ∀ {n} (M′ : VS n) (Ms : Meets n) → Redundant M′ Ms → Necessary M′ Ms → ∅
-Redundant∧Necessary→∅ M′ [ M ]    (_ , there () , _)  _ 
-Redundant∧Necessary→∅ M′ [ M ]    (.M , here ≡-refl , M⊆M′)  (p ∷ []) = p M⊆M′
-Redundant∧Necessary→∅ M′ (M ∷ Ms) (.M , here ≡-refl , M⊆M′)  (p ∷ ps) = p M⊆M′
-Redundant∧Necessary→∅ M′ (M ∷ Ms) (M' , there pxs , M'⊆M′) (p ∷ ps) = 
-  Redundant∧Necessary→∅ M′ Ms (M' , pxs , M'⊆M′) ps
+------------------------------------------------------------------------
+-- Necessity/redundancy is decidable
 
--- Necessity is decidable
 necessary? : ∀ {n} → Decidable (Necessary {n})
-necessary? M′ [ M ]    with M ⊆? M′
-... | yes p = no (Redundant∧Necessary→∅ M′ ([ M ]) (M , here ≡-refl , p))
+necessary? m′ [ m ]    with m ⊆? m′
+... | yes p = no (Redundant∧Necessary→⊥ m′ [ m ] (m , here ≡-refl , p))
 ... | no p  = yes (p ∷ [])
-necessary? M′ (M ∷ Ms) with M ⊆? M′
-... | yes p = no (Redundant∧Necessary→∅ M′ (M ∷ Ms) (M , here ≡-refl , p))
-... | no ¬p with necessary? M′ Ms
+necessary? m′ (m ∷ ms) with m ⊆? m′
+... | yes p = no (Redundant∧Necessary→⊥ m′ (m ∷ ms) (m , here ≡-refl , p))
+... | no ¬p with necessary? m′ ms
 ... | yes p′ = yes (¬p ∷ p′)
 ... | no ¬p′ = no (¬p′ ∘ tail)
 
--- Given M′ and M₁ ∨ ... ∨ Mn
--- insert M′ and remove all Mi st M′ ⊆ M
--- Only run this when M′ is necessary
-removeDependencies : ∀ {n} → VS n → Meets n → Meets n
-removeDependencies M′ [ M ]    with M′ ⊆? M
-... | yes p = [ M′ ] 
-... | no ¬p = M′ ∷ [ M ]
-removeDependencies M′ (M ∷ Ms) with M′ ⊆? M
-... | yes p = removeDependencies M′ Ms
-... | no ¬p = M ∷ removeDependencies M′ Ms
+------------------------------------------------------------------------
+-- Given a necessary m′ and m₁ ∨ ... ∨ mn
+-- insert m′ and remove all mi st m′ ⊆ m
 
--- Given all the meets, decide which are necessary
+removeDependencies : ∀ {n} → VS n → DNF n → DNF n
+removeDependencies m′ [ m ]    with m′ ⊆? m
+... | yes p = [ m′ ] 
+... | no ¬p = m′ ∷ [ m ]
+removeDependencies m′ (m ∷ ms) with m′ ⊆? m
+... | yes p = removeDependencies m′ ms
+... | no ¬p = m ∷ removeDependencies m′ ms
+
+------------------------------------------------------------------------
+-- Given a formula in DNF, decide which are necessary
 -- and remove all their dependencies
-removeRedundancies : ∀ {n} → Meets n → Meets n
-removeRedundancies [ M ] = [ M ]
-removeRedundancies (M ∷ Ms) with necessary? M Ms
-... | yes p = removeDependencies M (removeRedundancies Ms)
-... | no ¬p = removeRedundancies Ms
 
--- If we have that M′ is necessary in Ms, then it is still
--- necessary if we remove its dependencies
-Necessary-rmDep : ∀ {n} (M M′ : VS n) → M ⊈ M′
-                → (Ms : Meets n) 
-                → Necessary M′ Ms → Necessary M′ (removeDependencies M Ms)
-Necessary-rmDep M′ M M⊈M′ [ M″ ]    (n ∷ []) with M′ ⊆? M″
-... | yes p = M⊈M′ ∷ [] 
-... | no ¬p = M⊈M′ ∷ (n ∷ [])
-Necessary-rmDep M′ M M⊈M′ (M″ ∷ Ms) (n ∷ ns) with M′ ⊆? M″
-... | yes p = Necessary-rmDep M′ M M⊈M′ Ms ns
-... | no ¬p = n ∷ (Necessary-rmDep M′ M M⊈M′ Ms ns)
+removeRedundancies : ∀ {n} → DNF n → DNF n
+removeRedundancies [ m ] = [ m ]
+removeRedundancies (m ∷ ms) with necessary? m ms
+... | yes p = removeDependencies m (removeRedundancies ms)
+... | no ¬p = removeRedundancies ms
 
--- Similarly, if M′ is necessary we can remove all redunancies
--- (and their dependencies), and M′ is still necessary
-Necessary-rmReds : ∀ {n} (M′ : VS n) (Ms : Meets n) 
-                     → Necessary M′ Ms → Necessary M′ (removeRedundancies Ms)
-Necessary-rmReds M′ [ M ]    (p ∷ []) = p ∷ []
-Necessary-rmReds M′ (M ∷ Ms) (n ∷ ns) with necessary? M Ms
-... | yes p = Necessary-rmDep M M′ n (removeRedundancies Ms) (Necessary-rmReds M′ Ms ns)
-... | no ¬p = Necessary-rmReds M′ Ms ns
+------------------------------------------------------------------------
+-- If we have that m′ is necessary in a DNF formula
+-- then it is still necessary if we remove its dependencies.
 
--- If M′ is redundant (∃ λ M → M ⊆ M′), then we can safely 
--- remove it without changing the evaluated value.
--- The lemma₅ uses absorption
-rmRed-correct : ∀ {n} (Γ : Env n) {M M′}
-                → M ⊆ M′ 
-                → ⟦ M ⟧″ Γ ∨ ⟦ M′ ⟧″ Γ ≈ ⟦ M ⟧″ Γ
-rmRed-correct Γ last = ∨-idempotent _
-rmRed-correct (γ ∷ Γ) (stop vs′)      = proj₁ absorptive γ _
-rmRed-correct (γ ∷ Γ) (keep vs⊆vs′)   = lemma₄ (rmRed-correct Γ vs⊆vs′)
-rmRed-correct (γ ∷ Γ) (drop-T vs⊆vs′) = lemma₅ (rmRed-correct Γ vs⊆vs′) 
-rmRed-correct (γ ∷ Γ) (drop-F vs⊆vs′) = rmRed-correct Γ vs⊆vs′
+Necessary-rmDep : ∀ {n} (m m′ : VS n) → m ⊈ m′ → (ms : DNF n) 
+                → Necessary m′ ms → Necessary m′ (removeDependencies m ms)
+Necessary-rmDep m′ m m⊈m′ [ m″ ]    (n ∷ []) with m′ ⊆? m″
+... | yes p = m⊈m′ ∷ [] 
+... | no ¬p = m⊈m′ ∷ (n ∷ [])
+Necessary-rmDep m′ m m⊈m′ (m″ ∷ ms) (n ∷ ns) with m′ ⊆? m″
+... | yes p = Necessary-rmDep m′ m m⊈m′ ms ns
+... | no ¬p = n ∷ (Necessary-rmDep m′ m m⊈m′ ms ns)
 
--- If a meet is necessary, we can safely remove all its dependencies 
-rmDep-correct : ∀ {n} (Γ : Env n) M′ Ms
-              → Necessary M′ Ms
-              → ⟦ M′ ⟧″ Γ ∨ ⟦ Ms ⟧′ Γ ≈ ⟦ removeDependencies M′ Ms ⟧′ Γ
-rmDep-correct Γ M′ [ M ]    (n ∷ []) with M′ ⊆? M
-... | yes p = rmRed-correct Γ p 
+------------------------------------------------------------------------
+-- Similarly, if m′ is necessary we can remove all redunancies
+-- (and their dependencies), and m′ is still necessary
+
+Necessary-rmReds : ∀ {n} (m′ : VS n) (ms : DNF n) 
+                     → Necessary m′ ms → Necessary m′ (removeRedundancies ms)
+Necessary-rmReds m′ [ m ]    (p ∷ []) = p ∷ []
+Necessary-rmReds m′ (m ∷ ms) (n ∷ ns) with necessary? m ms
+... | yes p = Necessary-rmDep m m′ n (removeRedundancies ms) (Necessary-rmReds m′ ms ns)
+... | no ¬p = Necessary-rmReds m′ ms ns
+
+------------------------------------------------------------------------
+-- If m ⊆ m′, then we can remove it without changing the evaluated value.
+-- Here we use absorption (lemma₅ uses absorption, too).
+
+rm-⊆-correct : ∀ {n} (Γ : Env n) {m m′ : VS n}
+              → m ⊆ m′ 
+              → ⟦ m ⟧″ Γ ∨ ⟦ m′ ⟧″ Γ ≈ ⟦ m ⟧″ Γ
+rm-⊆-correct Γ last = ∨-idempotent _
+rm-⊆-correct (γ ∷ Γ) (stop vs′)      = proj₁ absorptive γ _
+rm-⊆-correct (γ ∷ Γ) (keep vs⊆vs′)   = lemma₄ (rm-⊆-correct Γ vs⊆vs′)
+rm-⊆-correct (γ ∷ Γ) (drop-T vs⊆vs′) = lemma₅ (rm-⊆-correct Γ vs⊆vs′) 
+rm-⊆-correct (γ ∷ Γ) (drop-F vs⊆vs′) = rm-⊆-correct Γ vs⊆vs′
+
+------------------------------------------------------------------------
+-- If a conjunct is necessary, we can safely remove all its dependencies 
+
+rmDep-correct : ∀ {n} (Γ : Env n) (m′ : VS n) (ms : DNF n)
+              → Necessary m′ ms
+              → ⟦ m′ ⟧″ Γ ∨ ⟦ ms ⟧′ Γ ≈ ⟦ removeDependencies m′ ms ⟧′ Γ
+rmDep-correct Γ m′ [ m ]    (n ∷ []) with m′ ⊆? m
+... | yes p = rm-⊆-correct Γ p 
 ... | no ¬p = refl
-rmDep-correct Γ M′ (M ∷ Ms) (n ∷ ns) with M′ ⊆? M
+rmDep-correct Γ m′ (m ∷ ms) (n ∷ ns) with m′ ⊆? m
 ... | yes p = sym (∨-assoc _ _ _) 
-            ⟨ trans ⟩ (rmRed-correct Γ p ⟨ ∨-cong ⟩ refl) 
-            ⟨ trans ⟩ rmDep-correct Γ M′ Ms ns
-... | no ¬p = lemma₆ ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ rmDep-correct Γ M′ Ms ns) 
+            ⟨ trans ⟩ (rm-⊆-correct Γ p ⟨ ∨-cong ⟩ refl) 
+            ⟨ trans ⟩ rmDep-correct Γ m′ ms ns
+... | no ¬p = lemma₆ ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ rmDep-correct Γ m′ ms ns) 
 
--- If a meet is redundant, we can safely remove it
-rmRedMeet-correct : ∀ {n} (Γ : Env n) M′ Ms
-            → Redundant M′ Ms
-            → ⟦ M′ ⟧″ Γ ∨ ⟦ Ms ⟧′ Γ ≈ ⟦ Ms ⟧′ Γ
-rmRedMeet-correct Γ M′ [ M ] (.M , here ≡-refl , M⊆M′) = ∨-comm _ _ ⟨ trans ⟩ rmRed-correct Γ M⊆M′
-rmRedMeet-correct Γ M′ [ M ] (M″ , there ()    , M⊆M′)
-rmRedMeet-correct Γ M′ (M ∷ Ms) (.M , here ≡-refl , M⊆M′) = lemma₆ ⟨ trans ⟩ sym (∨-assoc _ _ _) 
-                                                          ⟨ trans ⟩ (rmRed-correct Γ M⊆M′ ⟨ ∨-cong ⟩ refl {⟦ Ms ⟧′ Γ})
-rmRedMeet-correct Γ M′ (M″ ∷ Ms) (M , there M∈Ms , M⊆M′) = lemma₆ ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ rmRedMeet-correct Γ M′ Ms (M , M∈Ms , M⊆M′))
+-- If a conjunct is redundant, we can safely remove it.
+rmRed-correct : ∀ {n} (Γ : Env n) (m′ : VS n) (ms : DNF n)
+            → Redundant m′ ms
+            → ⟦ m′ ⟧″ Γ ∨ ⟦ ms ⟧′ Γ ≈ ⟦ ms ⟧′ Γ
+rmRed-correct Γ m′ [ m ] (.m , here ≡-refl , m⊆m′) 
+  = ∨-comm _ _ ⟨ trans ⟩ rm-⊆-correct Γ m⊆m′
+rmRed-correct Γ m′ [ m ] (m″ , there ()    , m⊆m′)
+rmRed-correct Γ m′ (m ∷ ms) (.m , here ≡-refl , m⊆m′) 
+  = lemma₆ ⟨ trans ⟩ sym (∨-assoc _ _ _) ⟨ trans ⟩ 
+    (rm-⊆-correct Γ m⊆m′ ⟨ ∨-cong ⟩ refl)
+rmRed-correct Γ m′ (m″ ∷ ms) (m , there m∈ms , m⊆m′) 
+  = lemma₆ ⟨ trans ⟩ (refl ⟨ ∨-cong ⟩ rmRed-correct Γ m′ ms (m , m∈ms , m⊆m′))
   
--- Removing all redundancies from meets does not change the value
-rmReds-correct : ∀ {n} (Γ : Env n) Ms
-               → ⟦ Ms ⟧′ Γ ≈ ⟦ removeRedundancies Ms ⟧′ Γ
-rmReds-correct Γ [ M ]    = refl
-rmReds-correct Γ (M ∷ Ms) with necessary? M Ms
-... | yes p = refl ⟨ ∨-cong ⟩ rmReds-correct Γ Ms 
-            ⟨ trans ⟩ rmDep-correct Γ M (removeRedundancies Ms) 
-                                        (Necessary-rmReds M Ms p)
-... | no ¬p = rmRedMeet-correct Γ M Ms (¬Necessary→Redundant M Ms ¬p) 
-            ⟨ trans ⟩ rmReds-correct Γ Ms
+------------------------------------------------------------------------
+-- Removing all redundancies from a DNF formula does not change the value
+
+rmReds-correct : ∀ {n} (Γ : Env n) (ms : DNF n)
+               → ⟦ ms ⟧′ Γ ≈ ⟦ removeRedundancies ms ⟧′ Γ
+rmReds-correct Γ [ m ]    = refl
+rmReds-correct Γ (m ∷ ms) with necessary? m ms
+... | yes p = refl ⟨ ∨-cong ⟩ rmReds-correct Γ ms 
+            ⟨ trans ⟩ rmDep-correct Γ m (removeRedundancies ms) 
+                                        (Necessary-rmReds m ms p)
+... | no ¬p = rmRed-correct Γ m ms (¬Necessary→Redundant m ms ¬p) 
+            ⟨ trans ⟩ rmReds-correct Γ ms
   
        

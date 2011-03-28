@@ -2,21 +2,30 @@ module DLSolver.DNF where
 
 open import Data.Nat
 open import Data.Fin
-open import Data.Vec hiding ([_] ; _>>=_ ; _++_) 
-open import Data.List.NonEmpty renaming (monad to monad⁺)
+open import Data.List.NonEmpty 
 open import DLSolver.VarSets
 open import Category.Monad
-
-open RawMonad monad⁺
+open RawMonad monad
 
 infixr 8 _and_
 infixr 7 _or_
-  
+
+-- The expression datatype  
 data Expr (n : ℕ) : Set where
   var        : (x : Fin n) → Expr n
   _and_ _or_ : (e₁ e₂ : Expr n) → Expr n
 
-DNF : ∀ {n} → Expr n → Meets n
-DNF (var x)     = [ singleton x ]
-DNF (e₁ or  e₂) = DNF e₁ ⁺++⁺ DNF e₂  
-DNF (e₁ and e₂) = DNF e₁ >>= λ t₁ → DNF e₂ >>= λ t₂ → [ t₁ ∪ t₂ ]
+------------------------------------------------------------------------
+-- The DNF is a non-empty list of variable sets.
+-- [ M₁ , M₂ , .. , Mn ] to be interpreted as
+-- M₁ ∨ M₂ ∨ .. ∨ Mn,
+-- and each Mi is a variable set to be interpreted as x₀ⁱ ∧ .. ∧ xnⁱ
+
+DNF : ℕ → Set
+DNF n = List⁺ (VS n)
+
+-- Translating an expression to DNF
+toDNF : ∀ {n} → Expr n → DNF n
+toDNF (var x)     = [ singleton x ]
+toDNF (e₁ or  e₂) = toDNF e₁ ⁺++⁺ toDNF e₂  
+toDNF (e₁ and e₂) = toDNF e₁ >>= λ m₁ → toDNF e₂ >>= λ m₂ → [ m₁ ∪ m₂ ]
