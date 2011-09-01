@@ -1,15 +1,15 @@
 
------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- A library for automatically infering equality proofs of Distributive Lattices
 -- Dan Rosén
------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- This file gives a brief overview of the components of the solver.
 
 module DLSolver.README where
 
 --
--- Definition: Distributive Lattice (DL), a set with two binary operations 
+-- Definition: Distributive Lattice (DL), is a set with two binary operations 
 -- meet and join, commonly _∧_ and _∨_, which are associative, commutative
 -- idempotent and absorptive and distributive over each other.
 --
@@ -34,13 +34,18 @@ module DLSolver.README where
 -- redundant set Mk.
 
 
+-- The expression datatype
+import DLSolver.Expr
 
--- First, the expression datatype is defined, and the way to transform it
--- to Disjunctive Normal Form, which is just a nonempty list of meets.
+-- Transformation of expression to Disjunctive Normal Form,
+-- respresented as a nonempty list of variable sets
 import DLSolver.DNF
 
 -- The meets are presented as these variable sets used
 import DLSolver.VarSets
+
+-- The semantics of an expression, and of expressions in DNF
+import DLSolver.Eval
 
 -- Proof that rewriting to DNF preserves semantics of the expression
 import DLSolver.DNF-Correct
@@ -49,7 +54,7 @@ import DLSolver.DNF-Correct
 import DLSolver.Redundancies
 
 -- Finally, the result is sorted to simulate a set
-import DLSolver.Sort
+import DLSolver.DNF-Sort
 
 -- The solver is packed here. Uses the reflection primives.
 -- Note that by simulating sets by sorting, and using variable sets, we can

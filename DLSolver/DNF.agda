@@ -4,16 +4,9 @@ open import Data.Nat
 open import Data.Fin
 open import Data.List.NonEmpty 
 open import DLSolver.VarSets
+open import DLSolver.Expr
 open import Category.Monad
 open RawMonad monad
-
-infixr 8 _and_
-infixr 7 _or_
-
--- The expression datatype  
-data Expr (n : ℕ) : Set where
-  var        : (x : Fin n) → Expr n
-  _and_ _or_ : (e₁ e₂ : Expr n) → Expr n
 
 ------------------------------------------------------------------------
 -- The DNF is a non-empty list of variable sets.

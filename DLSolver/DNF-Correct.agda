@@ -14,6 +14,7 @@ open RawMonad monad
 open import Function
 
 open import DLSolver.VarSets
+open import DLSolver.Expr
 open import DLSolver.DNF
 
 open DistributiveLattice DL renaming (Carrier to X)

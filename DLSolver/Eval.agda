@@ -9,6 +9,7 @@ open import Data.List.NonEmpty
 
 open import DLSolver.VarSets
 open import DLSolver.DNF
+open import DLSolver.Expr
 
 open DistributiveLattice DL renaming (Carrier to X)
 

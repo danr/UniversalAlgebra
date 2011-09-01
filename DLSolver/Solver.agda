@@ -6,6 +6,7 @@ module DLSolver.Solver {δ₁ δ₂} (DL : DistributiveLattice δ₁ δ₂) wher
 open import Function
 
 open import DLSolver.DNF
+open import DLSolver.Expr public
 
 open DistributiveLattice DL renaming (Carrier to X)
 import Algebra.Props.DistributiveLattice as P-DL; open P-DL DL
