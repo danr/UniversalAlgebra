@@ -13,18 +13,29 @@ open import Relation.Binary.PropositionalEquality
 
 open import Level
 
+-- A Semigroup is an algebraic structure with one binary operator (a Magma),
+-- with the additional constraint that the operator is associative.
+-- This is expressed as follows in this DSL.
 Semigroup : Structure
 Semigroup = record
   { arities = 2 ∷ []
+  -- The build keyword gives you the operators of the structure as an argument
+  -- to a lambda function. The 2 in the tuple refers to this being a law with
+  -- suc 2 = 3 arguments, and then a new lambda function with those arguments
+  -- expressing the law of associativity.
   ; laws    = build (λ _∙_ → (2 , λ x y z → ((x ∙ y) ∙ z) == (x ∙ (y ∙ z))) ∷ [])
   }
 
+-- Lava is my name for a Commutative Magma, also known as Steiner Magma.
 Lava : Structure
 Lava = record
   { arities = 2 ∷ []
   ; laws    = build (λ _∙_ → (1 , λ x y → (x ∙ y) == (y ∙ x)) ∷ [])
   }
 
+-- When we enlarge this for Monoids, we can use the associativity expressed 
+-- in the Semigroup, by letting the binary operator inherit the laws 
+-- (of associativity) from the Semigroup.
 Monoid : Structure
 Monoid = record
   { arities = 2 ∷ 0 ∷ []
@@ -57,6 +68,7 @@ AbelianGroup = record
            ++ from⟨ Lava  ⟩ (λ ε _⁻¹ _∙_ → _∙_ ∷ [])
   }
 
+-- Not a real structure per se, but describes that the two operators distribute.
 Distributive : Structure
 Distributive = record
   { arities = 2 ∷ 2 ∷ []
@@ -65,6 +77,7 @@ Distributive = record
                                ∷ [])
   }
 
+-- Now we can simply express structures as this Commutative Semiring
 CommutativeSemiring : Structure
 CommutativeSemiring = record
   { arities = 2 ∷ 2 ∷ 0 ∷ 0 ∷ []
@@ -76,6 +89,7 @@ CommutativeSemiring = record
                                      ∷ [])
   }
 
+-- Or even a normal Ring.
 Ring : Structure
 Ring = record
   { arities = 2 ∷ 2 ∷ 1 ∷ 0 ∷ 0 ∷ []
